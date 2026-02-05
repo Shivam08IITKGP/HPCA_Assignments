@@ -28,43 +28,45 @@ def parse_size(s):
 
 df['L1_Int'] = df['L1_Size'].apply(parse_size)
 df['L2_Int'] = df['L2_Size'].apply(parse_size)
+# L1 Hit Rate = 1 - L1 Miss Rate
+df['L1_HitRate'] = 1 - df['L1_MissRate']
 df = df.sort_values(['Type', 'L1_Int', 'L2_Int'])
 
 # Set visual style
 sns.set_style("whitegrid")
 
-# --- PLOT 1: L2 MISS RATE COMPARISON (from original plot.py) ---
+# --- PLOT 1: L2 MISS RATE COMPARISON ---
 plt.figure(figsize=(10, 6))
-# Filter to see pure L2 size impact for a fixed L1
-subset = df[(df['L1_Size'] == '64kB') & (df['L1_Assoc'] == 8)]
+# Filter to see pure L2 size impact for a fixed L1 configuration
+subset_l2 = df[(df['L1_Size'] == '64kB') & (df['L1_Assoc'] == 8) & (df['L2_Assoc'] == 16)]
 
-sns.barplot(data=subset, x='L2_Size', y='L2_MissRate', hue='Type', palette='viridis')
-plt.title('L2 Miss Rate: Chunked vs Simple (L1=64kB, Assoc=8)')
+sns.barplot(data=subset_l2, x='L2_Size', y='L2_MissRate', hue='Type', palette='viridis')
+plt.title('L2 Miss Rate: Chunked vs Simple (L1=64kB, L1_Assoc=8, L2_Assoc=16)')
 plt.ylabel('L2 Miss Rate (Lower is Better)')
 plt.savefig(f'{output_dir}/plot_miss_rate_comparison.png')
 print(f"Saved {output_dir}/plot_miss_rate_comparison.png")
 
-# --- PLOT 2: EXECUTION TIME COMPARISON (from original plot.py) ---
+# --- PLOT 2: L1 SIZE IMPACT ON EXECUTION TIME ---
 plt.figure(figsize=(10, 6))
-sns.lineplot(data=subset, x='L1_Size', y='Time', hue='Type', marker='o')
-plt.title('L1 Size impact on Execution Time (Fixed L2=512kB)')
+# Filter for fixed L2 to see L1 size impact
+subset_l1 = df[(df['L2_Size'] == '512kB') & (df['L1_Assoc'] == 8) & (df['L2_Assoc'] == 16)]
+sns.lineplot(data=subset_l1, x='L1_Size', y='Time', hue='Type', marker='o')
+plt.title('Impact of L1 Size on Execution Time (Fixed L2=512kB)')
 plt.ylabel('Execution Time (seconds)')
 plt.savefig(f'{output_dir}/plot_time_impact.png')
 print(f"Saved {output_dir}/plot_time_impact.png")
 
 # --- PLOT 3: CPU Efficiency (IPC) ---
 plt.figure(figsize=(10, 6))
-sns.barplot(data=subset, x='L2_Size', y='IPC', hue='Type', palette='muted')
+sns.barplot(data=subset_l2, x='L2_Size', y='IPC', hue='Type', palette='muted')
 plt.title('CPU Efficiency (IPC): Chunked vs Simple (L1=64kB)')
 plt.ylabel('IPC (Higher is Better)')
 plt.savefig(f'{output_dir}/plot_ipc_efficiency.png')
 print(f"Saved {output_dir}/plot_ipc_efficiency.png")
 
-# --- PLOT 4: Hit Rate (from plot_part2.py logic) ---
-# L1 Hit Rate = 1 - L1 Miss Rate
-df['L1_HitRate'] = 1 - df['L1_MissRate']
+# --- PLOT 4: Hit Rate vs L1 Size ---
 plt.figure(figsize=(10, 6))
-sns.lineplot(data=subset, x='L1_Size', y='L1_HitRate', hue='Type', marker='s')
+sns.lineplot(data=subset_l1, x='L1_Size', y='L1_HitRate', hue='Type', marker='s')
 plt.title('L1 Hit Rate vs L1 Size (Fixed L2=512kB)')
 plt.ylabel('L1 Hit Rate')
 plt.ylim(0, 1.05)
