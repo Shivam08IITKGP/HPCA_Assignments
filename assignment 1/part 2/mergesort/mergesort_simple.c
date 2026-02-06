@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-.
+
 #define ARR_SIZE 2621440
 
 int arr[ARR_SIZE];
