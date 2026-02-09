@@ -32,45 +32,77 @@ df['L2_Int'] = df['L2_Size'].apply(parse_size)
 df['L1_HitRate'] = 1 - df['L1_MissRate']
 df = df.sort_values(['Type', 'L1_Int', 'L2_Int'])
 
-# Set visual style
-sns.set_style("whitegrid")
+# Set visual style with better contrast
+sns.set_style("darkgrid")
+sns.set_context("paper", font_scale=1.3)
+plt.rcParams['figure.facecolor'] = 'white'
+plt.rcParams['axes.facecolor'] = '#f0f0f0'
+plt.rcParams['axes.edgecolor'] = 'black'
+plt.rcParams['axes.linewidth'] = 1.5
+plt.rcParams['grid.alpha'] = 0.6
 
 # --- PLOT 1: L2 MISS RATE COMPARISON ---
-plt.figure(figsize=(10, 6))
+plt.figure(figsize=(12, 7), dpi=100)
 # Filter to see pure L2 size impact for a fixed L1 configuration
 subset_l2 = df[(df['L1_Size'] == '64kB') & (df['L1_Assoc'] == 8) & (df['L2_Assoc'] == 16)]
 
-sns.barplot(data=subset_l2, x='L2_Size', y='L2_MissRate', hue='Type', palette='viridis')
-plt.title('L2 Miss Rate: Chunked vs Simple (L1=64kB, L1_Assoc=8, L2_Assoc=16)')
-plt.ylabel('L2 Miss Rate (Lower is Better)')
-plt.savefig(f'{output_dir}/plot_miss_rate_comparison.png')
+sns.barplot(data=subset_l2, x='L2_Size', y='L2_MissRate', hue='Type', palette=['#d62728', '#2ca02c'], edgecolor='black', linewidth=1.5)
+plt.title('L2 Miss Rate: Chunked vs Simple (L1=64kB, L1_Assoc=8, L2_Assoc=16)', fontsize=16, fontweight='bold', pad=20)
+plt.ylabel('L2 Miss Rate (Lower is Better)', fontsize=13, fontweight='bold')
+plt.xlabel('L2 Cache Size', fontsize=13, fontweight='bold')
+plt.legend(title='Algorithm Type', fontsize=11, title_fontsize=12, framealpha=0.9)
+plt.tight_layout()
+plt.savefig(f'{output_dir}/plot_miss_rate_comparison.png', dpi=300, bbox_inches='tight')
+plt.close()
 print(f"Saved {output_dir}/plot_miss_rate_comparison.png")
 
 # --- PLOT 2: L1 SIZE IMPACT ON EXECUTION TIME ---
-plt.figure(figsize=(10, 6))
+plt.figure(figsize=(12, 7), dpi=100)
 # Filter for fixed L2 to see L1 size impact
 subset_l1 = df[(df['L2_Size'] == '512kB') & (df['L1_Assoc'] == 8) & (df['L2_Assoc'] == 16)]
-sns.lineplot(data=subset_l1, x='L1_Size', y='Time', hue='Type', marker='o')
-plt.title('Impact of L1 Size on Execution Time (Fixed L2=512kB)')
-plt.ylabel('Execution Time (seconds)')
-plt.savefig(f'{output_dir}/plot_time_impact.png')
+sns.lineplot(data=subset_l1, x='L1_Size', y='Time', hue='Type', marker='o', markersize=10, linewidth=3, palette=['#d62728', '#2ca02c'])
+plt.title('Impact of L1 Size on Execution Time (Fixed L2=512kB)', fontsize=16, fontweight='bold', pad=20)
+plt.ylabel('Execution Time (seconds)', fontsize=13, fontweight='bold')
+plt.xlabel('L1 Cache Size', fontsize=13, fontweight='bold')
+plt.legend(title='Algorithm Type', fontsize=11, title_fontsize=12, framealpha=0.9)
+plt.grid(True, alpha=0.3, linestyle='--')
+plt.tight_layout()
+plt.savefig(f'{output_dir}/plot_time_impact.png', dpi=300, bbox_inches='tight')
+plt.close()
 print(f"Saved {output_dir}/plot_time_impact.png")
 
 # --- PLOT 3: CPU Efficiency (IPC) ---
-plt.figure(figsize=(10, 6))
-sns.barplot(data=subset_l2, x='L2_Size', y='IPC', hue='Type', palette='muted')
-plt.title('CPU Efficiency (IPC): Chunked vs Simple (L1=64kB)')
-plt.ylabel('IPC (Higher is Better)')
-plt.savefig(f'{output_dir}/plot_ipc_efficiency.png')
+plt.figure(figsize=(12, 7), dpi=100)
+sns.barplot(data=subset_l2, x='L2_Size', y='IPC', hue='Type', palette=['#1f77b4', '#ff7f0e'], edgecolor='black', linewidth=1.5)
+plt.title('CPU Efficiency (IPC): Chunked vs Simple (L1=64kB)', fontsize=16, fontweight='bold', pad=20)
+plt.ylabel('IPC (Higher is Better)', fontsize=13, fontweight='bold')
+plt.xlabel('L2 Cache Size', fontsize=13, fontweight='bold')
+plt.legend(title='Algorithm Type', fontsize=11, title_fontsize=12, framealpha=0.9)
+plt.tight_layout()
+plt.savefig(f'{output_dir}/plot_ipc_efficiency.png', dpi=300, bbox_inches='tight')
+plt.close()
 print(f"Saved {output_dir}/plot_ipc_efficiency.png")
 
 # --- PLOT 4: Hit Rate vs L1 Size ---
-plt.figure(figsize=(10, 6))
-sns.lineplot(data=subset_l1, x='L1_Size', y='L1_HitRate', hue='Type', marker='s')
-plt.title('L1 Hit Rate vs L1 Size (Fixed L2=512kB)')
-plt.ylabel('L1 Hit Rate')
-plt.ylim(0, 1.05)
-plt.savefig(f'{output_dir}/plot_hitrate_l1.png')
+plt.figure(figsize=(12, 7), dpi=100)
+# Plot each type separately with different styles for better visibility
+simple_data = subset_l1[subset_l1['Type'] == 'Simple']
+chunked_data = subset_l1[subset_l1['Type'] == 'Chunked']
+
+plt.plot(simple_data['L1_Size'], simple_data['L1_HitRate'], marker='o', markersize=12, 
+         linewidth=3.5, color='#d62728', linestyle='-', label='Simple', alpha=0.9)
+plt.plot(chunked_data['L1_Size'], chunked_data['L1_HitRate'], marker='s', markersize=12, 
+         linewidth=3.5, color='#2ca02c', linestyle='--', label='Chunked', alpha=0.9)
+
+plt.title('L1 Hit Rate vs L1 Size (Fixed L2=512kB)', fontsize=16, fontweight='bold', pad=20)
+plt.ylabel('L1 Hit Rate', fontsize=13, fontweight='bold')
+plt.xlabel('L1 Cache Size', fontsize=13, fontweight='bold')
+plt.ylim(0.97, 1.002)
+plt.legend(title='Algorithm Type', fontsize=11, title_fontsize=12, framealpha=0.9, loc='lower right')
+plt.grid(True, alpha=0.3, linestyle=':')
+plt.tight_layout()
+plt.savefig(f'{output_dir}/plot_hitrate_l1.png', dpi=300, bbox_inches='tight')
+plt.close()
 print(f"Saved {output_dir}/plot_hitrate_l1.png")
 
 # --- TOP 3 CONFIGS BY IPC ---

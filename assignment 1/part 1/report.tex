@@ -1,0 +1,164 @@
+\documentclass[11pt, a4paper]{article}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{geometry}
+\usepackage{booktabs}
+\usepackage{fancyhdr}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{color}
+
+\geometry{a4paper, margin=1in}
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{HPC Assignment 1 - Problem 1}
+\rhead{\thepage}
+
+\lstset{
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    frame=single
+}
+
+\title{Problem 1: Cache Hierarchy Optimization using gem5}
+\author{Rahate Tanishka Shivendra (22CS30043), Shivam Choudhury (22CS10072)}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+This report details the investigation into cache hierarchy performance using the gem5 simulator. A memory-intensive matrix multiplication benchmark was run with a wide range of cache configurations to analyze the impact of L1/L2 cache sizes and associativities on execution time and miss rates. To fulfill the optional enhancements, the analysis was performed for three different matrix sizes: 64x64, 128x128, and 256x256, providing a comprehensive view of performance scaling.
+
+\section{Part 1: Environment Setup}
+The gem5 environment was configured with a RISC-V build. The core of the simulation setup is the \texttt{cache\_config.py} script, which defines the cache hierarchy and connects the components. This script was parameterized to allow for sweeping across different cache geometries.
+
+\subsection{Cache Configuration Script}
+The \texttt{cache\_config.py} script defines custom L1 instruction, L1 data, and L2 cache classes with configurable size and associativity parameters. Key components of the configuration:
+
+\begin{lstlisting}[language=Python, caption=Key sections of cache\_config.py]
+import m5
+from m5.objects import *
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--l1d_size", type=str, default="64kB")
+parser.add_argument("--binary", type=str, required=True)
+parser.add_argument("--l2_size", type=str, default="256kB")
+parser.add_argument("--l1_assoc", type=int, default=2)
+parser.add_argument("--l2_assoc", type=int, default=8)
+
+# Cache hierarchy with L1I, L1D, and unified L2
+system.cpu.icache = L1_ICache(args)
+system.cpu.dcache = L1_DCache(args)
+system.l2cache = L2Cache(args)
+\end{lstlisting}
+
+\subsection{Successful Test Run}
+A test run was performed with the default cache configuration to verify the setup. The command executed was:
+
+\begin{lstlisting}[language=bash]
+./build/RISCV/gem5.opt configs/cache_config.py \
+    --l1d_size=16kB --l2_size=256kB \
+    --l1_assoc=4 --l2_assoc=8 \
+    --binary=benchmarks/matrix_multiply
+\end{lstlisting}
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.9\textwidth]{gem5_test_run.png}
+    \caption{Screenshot of successful gem5 test run showing simulation initialization and completion.}
+    \label{fig:test_run}
+\end{figure}
+
+
+\subsection{Cache Statistics Output}
+The gem5 simulator generates detailed statistics in \texttt{stats.txt}. Key metrics from a sample run:
+
+\begin{lstlisting}[caption=Sample cache statistics from stats.txt]
+simSeconds                                   0.080250
+system.cpu.dcache.overallHits::total        130924
+system.cpu.dcache.overallMisses::total      1184
+system.cpu.dcache.overallMissRate::total    0.0090
+system.l2cache.overallHits::total           958
+system.l2cache.overallMisses::total         226
+system.l2cache.overallMissRate::total       0.1908
+\end{lstlisting}
+
+These statistics confirm that the cache hierarchy is functioning correctly, with the L1 data cache achieving a 99.1\% hit rate and the L2 cache handling the majority of L1 misses effectively.
+
+\section{Part 2 \& 3: Parameter Sweeps and Analysis}
+A full multi-parameter sweep was conducted, varying L1/L2 sizes and associativities for all three matrix sizes. This section analyzes the collected data.
+
+\subsection{Impact of L1 Cache Size}
+The L1 cache serves as the primary mechanism for reducing the effective memory access time (EMAT). As observed in Figure \ref{fig:l1_time}, the performance scaling is non-linear across matrix sizes.
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.9\textwidth]{plot_compare_l1_size_vs_time.png}
+    \caption{Impact of L1 Cache Size on Execution Time (log scale) across different matrix sizes.}
+    \label{fig:l1_time}
+\end{figure}
+
+\paragraph{Analysis:}
+For the 64x64 matrix, the working set is small enough that even a 16kB L1 cache captures the majority of the data. This results in a performance plateau where increasing cache size yields negligible benefits. However, for the 128x128 matrix, we observe a significant "performance cliff" between 32kB and 64kB. This suggests the cache has finally reached a size sufficient to hold a significant portion of the matrix rows/blocks, reducing capacity misses. For the 256x256 matrix, the execution time remains high and flat across all tested L1 sizes, indicating that the working set vastly exceeds L1 capacity, shifting the bottleneck entirely to the L2 level.
+
+\subsection{Impact of L2 Cache Size}
+When the L1 cache is insufficient, the L2 cache must minimize the penalty of main memory accesses. Figure \ref{fig:l2_time} illustrates this relationship under a constrained L1 (16kB).
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.8\textwidth]{plot_compare_l2_size_vs_time.png}
+    \caption{Impact of L2 Cache Size on Execution Time (log scale) when L1 cache is fixed at 16kB.}
+    \label{fig:l2_time}
+\end{figure}
+
+\paragraph{Analysis:}
+The 256x256 matrix shows the highest sensitivity to L2 scaling. There is a sharp drop in execution time when the L2 size increases from 128kB to 256kB. From an HPCA perspective, this identifies the "critical working set" for this matrix multiplication kernel; at 128kB, the L2 is thrashing, but at 256kB and above, it can retain enough tiles to significantly lower the Average Memory Access Time (AMAT).
+
+\subsection{Impact of Associativity}
+Associativity is designed to mitigate conflict misses by allowing a memory block to reside in multiple locations within a set.
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=\textwidth]{plot_compare_l1_miss_rate.png}
+    \caption{L1 Miss Rate by Associativity, faceted by Matrix Size.}
+    \label{fig:l1_miss_rate}
+\end{figure}
+
+\paragraph{Analysis:}
+In Figure \ref{fig:l1_miss_rate}, we see that for the 64x64 matrix, increasing associativity from 2 to 8 reduces the miss rate. This demonstrates that conflict misses are a relevant factor when the working set and cache size are comparable. However, for the 256x256 matrix, the miss rate remains near 0.5 across all associativity levels. This is a hallmark of \textbf{capacity misses}. In a high-miss regime where the data simply does not fit, increasing associativity offers no relief, as every new block must still evict a useful one.
+
+\section{Part 4: Design Analysis \& Recommendations}
+
+\subsection{Performance Bottlenecks}
+The primary bottleneck for larger matrices (128x128 and 256x256) is \textbf{L1 Capacity Stalls}. The L1 miss rates are exceptionally high (up to 0.5), meaning roughly half of all memory requests must wait for an L2 lookup.
+
+\subsection{Cache Efficiency}
+L2 cache capacity is the most critical factor for the 256x256 workload. As seen in the heatmaps (Figure \ref{fig:heatmaps}), the execution time is almost entirely vertically stratified. Changes in L1 size (Y-axis) result in nearly identical colors, whereas changes in L2 size (X-axis) result in massive color shifts. This implies that for this specific computational kernel, silicon area is more efficiently spent on L2 capacity than on L1 complexity.
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.48\textwidth]{plot_heatmap_time_128x128.png}
+    \includegraphics[width=0.48\textwidth]{plot_heatmap_time_256x256.png}
+    \caption{Execution Time Heatmaps for 128x128 (left) and 256x256 (right) matrices.}
+    \label{fig:heatmaps}
+\end{figure}
+
+\subsection{Cost-Benefit Trade-off}
+The smallest cache configuration achieving near-peak performance for a $128 \times 128$ matrix is
+\textbf{L1 = 64\,kB / L2 = 128\,kB}, with an execution time of approximately $0.08\,\text{s}$.
+For the $256 \times 256$ matrix, the performance ``sweet spot'' is
+\textbf{L1 = 16\,kB / L2 = 512\,kB}.
+Interestingly, allocating a larger L1 cache provides little benefit and results in inefficient silicon usage
+when the L2 cache is sufficiently large to accommodate the $256 \times 256$ working set.
+
+
+\subsection{Design Recommendations}
+Based on the empirical data, the following configurations are recommended:
+\begin{itemize}
+    \item \textbf{Area-Optimized (Small):} L1 16kB (2-way), L2 128kB. Sufficient for small data kernels with minimal area overhead.
+    \item \textbf{Throughput-Optimized (Large):} L1 16kB (2-way), L2 512kB (16-way). Since L1 size had little impact on the largest matrix, we keep L1 small and maximize L2 to handle large working sets.
+    \item \textbf{Balanced (Optimal):} L1 32kB (4-way), L2 256kB (8-way). This configuration sits at the "knee" of the performance curve for the 128x128 matrix while significantly improving 256x256 performance.
+\end{itemize}
+
+\end{document}

@@ -1,4 +1,4 @@
-part 1/results/full_sweep/L1_*
+part 1/results/full_sweep*/L1_*
 part 1/results/l1_*kB
 
 part 2/results/l1_*kB
@@ -6,5 +6,5 @@ part 2/results/full_sweep/Simple_*
 part 2/results/full_sweep/Chunked_*
 
 *.log
-
+m5out/
 
