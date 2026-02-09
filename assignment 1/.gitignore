@@ -7,4 +7,5 @@ part 2/results/full_sweep/Chunked_*
 
 *.log
 m5out/
+__pycache__/
 
