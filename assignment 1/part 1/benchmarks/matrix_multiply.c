@@ -13,7 +13,9 @@
 #include <string.h>
 #include <time.h>
 
-#define MATRIX_SIZE 128  /* Configurable: 64, 128, 256 */
+#ifndef MATRIX_SIZE
+#define MATRIX_SIZE 128  /* Default: 128. Override with -DMATRIX_SIZE=64 or -DMATRIX_SIZE=256 */
+#endif
 
 volatile int A[MATRIX_SIZE][MATRIX_SIZE];
 volatile int B[MATRIX_SIZE][MATRIX_SIZE];

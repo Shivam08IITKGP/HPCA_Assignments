@@ -1,41 +1,35 @@
 import pandas as pd
 import os
 
-# --- CONFIGURATION ---
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-CSV_PATH = os.path.join(SCRIPT_DIR, '../results/full_sweep/full_sweep_results.csv')
+script_dir = os.path.dirname(os.path.abspath(__file__))
+results_csv = os.path.join(script_dir, '../results/full_sweep/full_sweep_results.csv')
 
-# Default configuration from the PDF
-DEFAULT_L1_SIZE = '64kB'
-DEFAULT_L1_ASSOC = 8
-DEFAULT_L2_SIZE = '512kB'
-DEFAULT_L2_ASSOC = 16
+baseline_l1_size = '64kB'
+baseline_l1_assoc = 8
+baseline_l2_size = '512kB'
+baseline_l2_assoc = 16
 
-# --- LOAD DATA ---
 try:
-    df = pd.read_csv(CSV_PATH)
+    dataset = pd.read_csv(results_csv)
 except FileNotFoundError:
-    print(f"Error: Could not find CSV at {CSV_PATH}")
+    print(f"Error: Could not find CSV at {results_csv}")
     print("Please ensure that 'part 2/scripts/full_sweep.py' has been run successfully.")
     exit(1)
 
-# --- FILTER FOR DEFAULT CONFIGURATION ---
-baseline_df = df[
-    (df['L1_Size'] == DEFAULT_L1_SIZE) &
-    (df['L1_Assoc'] == DEFAULT_L1_ASSOC) &
-    (df['L2_Size'] == DEFAULT_L2_SIZE) &
-    (df['L2_Assoc'] == DEFAULT_L2_ASSOC)
+config_filter = dataset[
+    (dataset['L1_Size'] == baseline_l1_size) &
+    (dataset['L1_Assoc'] == baseline_l1_assoc) &
+    (dataset['L2_Size'] == baseline_l2_size) &
+    (dataset['L2_Assoc'] == baseline_l2_assoc)
 ]
 
-# --- DISPLAY RESULTS ---
-if baseline_df.empty:
+if config_filter.empty:
     print("Could not find the default configuration in the results file.")
-    print(f"Default config: L1D={DEFAULT_L1_SIZE}, L1_Assoc={DEFAULT_L1_ASSOC}, L2={DEFAULT_L2_SIZE}, L2_Assoc={DEFAULT_L2_ASSOC}")
+    print(f"Default config: L1D={baseline_l1_size}, L1_Assoc={baseline_l1_assoc}, L2={baseline_l2_size}, L2_Assoc={baseline_l2_assoc}")
 else:
     print("--- Part 2: Baseline Cache Performance Comparison ---")
-    # Select and rename columns for clarity
-    display_df = baseline_df[['Type', 'Time', 'IPC', 'L1_MissRate', 'L2_MissRate']].copy()
-    display_df.rename(columns={
+    output_table = config_filter[['Type', 'Time', 'IPC', 'L1_MissRate', 'L2_MissRate']].copy()
+    output_table.rename(columns={
         'Type': 'Mergesort Type',
         'Time': 'Execution Time (s)',
         'IPC': 'Instructions Per Cycle',
@@ -43,8 +37,7 @@ else:
         'L2_MissRate': 'L2 Miss Rate'
     }, inplace=True)
     
-    # Set 'Mergesort Type' as the index for a cleaner table
-    display_df.set_index('Mergesort Type', inplace=True)
+    output_table.set_index('Mergesort Type', inplace=True)
     
-    print(display_df.to_string(float_format="%.6f"))
+    print(output_table.to_string(float_format="%.6f"))
 

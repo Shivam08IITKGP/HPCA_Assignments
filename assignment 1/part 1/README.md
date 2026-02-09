@@ -8,12 +8,8 @@ This directory contains the gem5 simulation scripts and results for Problem 1, w
 ```
 part 1/
 ├── benchmarks/
-│   ├── matrix_multiply.c         # Original 128x128 matrix (provided)
-│   ├── matrix_multiply           # Compiled RISC-V binary
-│   ├── matrix_multiply_64.c      # 64x64 variant (optional enhancement)
-│   ├── matrix_multiply_64
-│   ├── matrix_multiply_256.c     # 256x256 variant (optional enhancement)
-│   └── matrix_multiply_256
+│   ├── matrix_multiply.c         # Single source file with #ifndef MATRIX_SIZE
+│   └── matrix_multiply           # Compiled RISC-V binary (128x128 default)
 ├── configs/
 │   └── cache_config.py           # gem5 cache hierarchy configuration
 ├── scripts/
@@ -67,11 +63,13 @@ python3 scripts/full_sweep.py
 ```bash
 python3 scripts/full_sweep_64.py
 ```
+*Note: This script automatically compiles the benchmark with `-DMATRIX_SIZE=64`*
 
 **For 256x256 matrix (optional enhancement):**
 ```bash
 python3 scripts/full_sweep_256.py
 ```
+*Note: This script automatically compiles the benchmark with `-DMATRIX_SIZE=256`*
 
 **Parameters swept:**
 - L1 Sizes: [16kB, 32kB, 64kB]
@@ -115,8 +113,28 @@ Best configurations by matrix size:
 - **256x256**: L1=32kB, L2=512kB, Assoc=8,16 → 1.0176s
 
 ## Compiling Benchmarks (if needed)
+
+**Default (128x128 matrix):**
 ```bash
 export PATH=/home/tishya/shivam/hpc/gem5/riscv-toolchain/riscv/bin:$PATH
 riscv64-unknown-linux-gnu-gcc -O2 -static benchmarks/matrix_multiply.c \
     -o benchmarks/matrix_multiply
+```
+
+**For different matrix sizes:**
+```bash
+# 64x64 matrix
+riscv64-unknown-linux-gnu-gcc -O2 -static -DMATRIX_SIZE=64 \
+    benchmarks/matrix_multiply.c -o benchmarks/matrix_multiply_64x64
+
+# 256x256 matrix
+riscv64-unknown-linux-gnu-gcc -O2 -static -DMATRIX_SIZE=256 \
+    benchmarks/matrix_multiply.c -o benchmarks/matrix_multiply_256x256
+```
+
+**Source code structure:**
+```c
+#ifndef MATRIX_SIZE
+#define MATRIX_SIZE 128  /* Default: 128. Override with -DMATRIX_SIZE=64 */
+#endif
 ```

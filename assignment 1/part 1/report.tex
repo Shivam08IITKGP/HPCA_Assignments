@@ -54,6 +54,17 @@ system.cpu.dcache = L1_DCache(args)
 system.l2cache = L2Cache(args)
 \end{lstlisting}
 
+The matrix multiplication benchmark uses a single source file with conditional compilation:
+\begin{lstlisting}[language=C, caption=Matrix size configuration in matrix\_multiply.c]
+#ifndef MATRIX_SIZE
+#define MATRIX_SIZE 128  /* Default: 128. Override with -DMATRIX_SIZE=64 */
+#endif
+
+volatile int A[MATRIX_SIZE][MATRIX_SIZE];
+volatile int B[MATRIX_SIZE][MATRIX_SIZE];
+volatile int C[MATRIX_SIZE][MATRIX_SIZE];
+\end{lstlisting}
+
 \subsection{Successful Test Run}
 A test run was performed with the default cache configuration to verify the setup. The command executed was:
 

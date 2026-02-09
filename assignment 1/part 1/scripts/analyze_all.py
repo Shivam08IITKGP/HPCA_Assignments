@@ -3,167 +3,148 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import os
 
-# --- CONFIGURATION ---
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-# Adjust this path if your results are in a different relative location
-RESULTS_DIR = os.path.join(SCRIPT_DIR, '../results')
-OUTPUT_DIR = os.path.join(RESULTS_DIR, 'analysis_all')
-os.makedirs(OUTPUT_DIR, exist_ok=True)
+current_dir = os.path.dirname(os.path.abspath(__file__))
+data_path = os.path.join(current_dir, '../results')
+plot_output = os.path.join(data_path, 'analysis_all')
+os.makedirs(plot_output, exist_ok=True)
 
-# Data sources for the different matrix sizes
-data_sources = {
-    64: os.path.join(RESULTS_DIR, 'full_sweep_64/full_sweep_results_64.csv'),
-    128: os.path.join(RESULTS_DIR, 'full_sweep/full_sweep_results.csv'),
-    256: os.path.join(RESULTS_DIR, 'full_sweep_256/full_sweep_results_256.csv')
+data_files = {
+    64: os.path.join(data_path, 'full_sweep_64/full_sweep_results_64.csv'),
+    128: os.path.join(data_path, 'full_sweep/full_sweep_results.csv'),
+    256: os.path.join(data_path, 'full_sweep_256/full_sweep_results_256.csv')
 }
 
-# --- LOAD AND COMBINE DATA ---
-all_data = []
-for size, path in data_sources.items():
-    if os.path.exists(path):
+combined_data = []
+for matrix_dim, file_path in data_files.items():
+    if os.path.exists(file_path):
         try:
-            df = pd.read_csv(path)
-            df['MatrixSize'] = size
-            all_data.append(df)
-            print(f"Loaded data for Matrix {size}")
+            dataframe = pd.read_csv(file_path)
+            dataframe['MatrixSize'] = matrix_dim
+            combined_data.append(dataframe)
+            print(f"Loaded data for Matrix {matrix_dim}")
         except Exception as e:
-            print(f"Error reading {path}: {e}")
+            print(f"Error reading {file_path}: {e}")
     else:
-        print(f"Warning: File not found: {path}")
+        print(f"Warning: File not found: {file_path}")
 
-if not all_data:
+if not combined_data:
     print("Error: No data files found. Exiting.")
     exit(1)
 
-df_combined = pd.concat(all_data, ignore_index=True)
+full_dataset = pd.concat(combined_data, ignore_index=True)
 
-# --- DATA PREPARATION ---
-# Clean strings and convert to integers
-df_combined['L1_Int'] = df_combined['L1_Size'].str.replace('kB','').astype(int)
-df_combined['L2_Int'] = df_combined['L2_Size'].str.replace('kB','').astype(int)
-df_combined['L1_Assoc'] = df_combined['L1_Assoc'].astype(int)
-df_combined['L2_Assoc'] = df_combined['L2_Assoc'].astype(int)
+full_dataset['L1_Int'] = full_dataset['L1_Size'].str.replace('kB','').astype(int)
+full_dataset['L2_Int'] = full_dataset['L2_Size'].str.replace('kB','').astype(int)
+full_dataset['L1_Assoc'] = full_dataset['L1_Assoc'].astype(int)
+full_dataset['L2_Assoc'] = full_dataset['L2_Assoc'].astype(int)
 
-# Convert Time to numeric
-df_combined['Time'] = pd.to_numeric(df_combined['Time'], errors='coerce')
-df_combined.dropna(subset=['Time'], inplace=True)
+full_dataset['Time'] = pd.to_numeric(full_dataset['Time'], errors='coerce')
+full_dataset.dropna(subset=['Time'], inplace=True)
 
-# --- SORTING SETUP (CRITICAL FOR HEATMAPS) ---
-# Create ordered categories so heatmaps sort 16->32->64, not 128->16->256
-l1_order = sorted(df_combined['L1_Int'].unique())
-l2_order = sorted(df_combined['L2_Int'].unique())
-l1_labels = [f"{x}kB" for x in l1_order]
-l2_labels = [f"{x}kB" for x in l2_order]
+l1_sorted = sorted(full_dataset['L1_Int'].unique())
+l2_sorted = sorted(full_dataset['L2_Int'].unique())
+l1_categories = [f"{x}kB" for x in l1_sorted]
+l2_categories = [f"{x}kB" for x in l2_sorted]
 
-df_combined['L1_Size'] = pd.Categorical(df_combined['L1_Size'], categories=l1_labels, ordered=True)
-df_combined['L2_Size'] = pd.Categorical(df_combined['L2_Size'], categories=l2_labels, ordered=True)
+full_dataset['L1_Size'] = pd.Categorical(full_dataset['L1_Size'], categories=l1_categories, ordered=True)
+full_dataset['L2_Size'] = pd.Categorical(full_dataset['L2_Size'], categories=l2_categories, ordered=True)
 
-# Set global style
 sns.set_theme(style="whitegrid", font_scale=1.1)
 
-# --- PLOT 1: L1 Size vs. Execution Time (Comparative) ---
 plt.figure(figsize=(12, 7))
 sns.lineplot(
-    data=df_combined[df_combined['L2_Size'] == '256kB'],
+    data=full_dataset[full_dataset['L2_Size'] == '256kB'],
     x='L1_Int',
     y='Time',
     hue='MatrixSize',
     style='L1_Assoc',
     marker='o',
-    markersize=8,  # Make markers bigger
-    palette='Dark2', # High contrast palette (Dark Green, Orange, Purple)
+    markersize=8,
+    palette='Dark2',
     linewidth=3
 )
 
 plt.xlabel('L1 Cache Size (kB)', fontsize=12)
 plt.ylabel('Execution Time (log scale)', fontsize=12)
 plt.yscale('log')
-plt.xticks(l1_order)
-# Move legend
+plt.xticks(l1_sorted)
 plt.legend(title='Matrix Size / L1 Assoc', bbox_to_anchor=(1.02, 1), loc='upper left', borderaxespad=0)
 plt.title('Impact of L1 Cache Size on Execution Time', fontsize=16, weight='bold')
-plt.tight_layout() # This works better now that legend is anchored
-plt.savefig(os.path.join(OUTPUT_DIR, 'plot_compare_l1_size_vs_time.png'), bbox_inches='tight')
+plt.tight_layout()
+plt.savefig(os.path.join(plot_output, 'plot_compare_l1_size_vs_time.png'), bbox_inches='tight')
 print("Saved Plot 1")
 
-# --- PLOT 2: L2 Size vs. Execution Time (Comparative) ---
 plt.figure(figsize=(12, 7))
 sns.lineplot(
-    data=df_combined[df_combined['L1_Size'] == '16kB'],
+    data=full_dataset[full_dataset['L1_Size'] == '16kB'],
     x='L2_Int',
     y='Time',
     hue='MatrixSize',
     style='L2_Assoc',
-    marker='s', # Square marker
+    marker='s',
     markersize=8,
-    palette='tab10', # Another high contrast palette
+    palette='tab10',
     linewidth=3
 )
 plt.title('Impact of L2 Cache Size on Execution Time (L1 Size = 16kB)', fontsize=16, weight='bold')
 plt.xlabel('L2 Cache Size (kB)', fontsize=12)
 plt.ylabel('Execution Time (log scale)', fontsize=12)
 plt.yscale('log')
-plt.xticks(l2_order)
+plt.xticks(l2_sorted)
 plt.legend(title='Matrix Size / L2 Assoc', bbox_to_anchor=(1.02, 1), loc='upper left')
 plt.tight_layout()
-plt.savefig(os.path.join(OUTPUT_DIR, 'plot_compare_l2_size_vs_time.png'), bbox_inches='tight')
+plt.savefig(os.path.join(plot_output, 'plot_compare_l2_size_vs_time.png'), bbox_inches='tight')
 print("Saved Plot 2")
 
-# --- PLOT 3: L1 Miss Rate vs. Matrix Size (Faceted) ---
-g = sns.catplot(
-    data=df_combined,
+fig = sns.catplot(
+    data=full_dataset,
     x='L1_Assoc',
     y='L1_MissRate',
     hue='L1_Size',
     col='MatrixSize',
     kind='bar',
-    palette='viridis', # Darker blues/greens, readable on white
-    edgecolor='black', # Add black border to bars for visibility
+    palette='viridis',
+    edgecolor='black',
     sharey=False,
     height=5, 
     aspect=0.8,
     legend_out=True
 )
 
-g.fig.subplots_adjust(top=0.85) 
-g.fig.suptitle('L1 Miss Rate by Associativity and Matrix Size', fontsize=16, weight='bold')
-g.set_axis_labels("L1 Associativity", "L1 Miss Rate")
-g.set_titles("Matrix {col_name}x{col_name}")
+fig.fig.subplots_adjust(top=0.85) 
+fig.fig.suptitle('L1 Miss Rate by Associativity and Matrix Size', fontsize=16, weight='bold')
+fig.set_axis_labels("L1 Associativity", "L1 Miss Rate")
+fig.set_titles("Matrix {col_name}x{col_name}")
 
-plt.savefig(os.path.join(OUTPUT_DIR, 'plot_compare_l1_miss_rate.png'), bbox_inches='tight')
+plt.savefig(os.path.join(plot_output, 'plot_compare_l1_miss_rate.png'), bbox_inches='tight')
 print("Saved Plot 3")
 
-# --- PLOT 4: Performance Heatmap ---
-# Ensure we iterate over sorted unique values
-for size in sorted(df_combined['MatrixSize'].unique()):
+for matrix_dim in sorted(full_dataset['MatrixSize'].unique()):
     plt.figure(figsize=(10, 8))
-    subset = df_combined[df_combined['MatrixSize'] == size]
+    data_subset = full_dataset[full_dataset['MatrixSize'] == matrix_dim]
     
-    # Pivot table will now respect the Categorical ordering we set earlier
-    pivot = subset.pivot_table(index='L1_Size', columns='L2_Size', values='Time', aggfunc='mean')
+    heatmap_data = data_subset.pivot_table(index='L1_Size', columns='L2_Size', values='Time', aggfunc='mean')
     
     sns.heatmap(
-        pivot, 
+        heatmap_data, 
         annot=True, 
         fmt=".4f", 
-        cmap="viridis", # High contrast gradient
+        cmap="viridis",
         linewidths=.5,
         linecolor='white'
     )
-    plt.title(f'Mean Execution Time Heatmap (Matrix {size}x{size})', fontsize=16, weight='bold', pad=15)
+    plt.title(f'Mean Execution Time Heatmap (Matrix {matrix_dim}x{matrix_dim})', fontsize=16, weight='bold', pad=15)
     plt.xlabel('L2 Cache Size')
     plt.ylabel('L1 Cache Size')
     
     plt.tight_layout()
-    plt.savefig(os.path.join(OUTPUT_DIR, f'plot_heatmap_time_{size}x{size}.png'))
-    print(f"Saved Heatmap {size}x{size}")
+    plt.savefig(os.path.join(plot_output, f'plot_heatmap_time_{matrix_dim}x{matrix_dim}.png'))
+    print(f"Saved Heatmap {matrix_dim}x{matrix_dim}")
 
-# --- Summary Tables ---
 print("\n--- Top 3 Fastest Configurations per Matrix Size ---")
-for size in sorted(df_combined['MatrixSize'].unique()):
-    print(f"\n--- Matrix Size: {size}x{size} ---")
-    # Sort by time to find fastest
-    top3 = df_combined[df_combined['MatrixSize'] == size].sort_values('Time').head(3)
-    print(top3[['L1_Size', 'L2_Size', 'L1_Assoc', 'L2_Assoc', 'Time']].to_string(index=False))
+for matrix_dim in sorted(full_dataset['MatrixSize'].unique()):
+    print(f"\n--- Matrix Size: {matrix_dim}x{matrix_dim} ---")
+    best_configs = full_dataset[full_dataset['MatrixSize'] == matrix_dim].sort_values('Time').head(3)
+    print(best_configs[['L1_Size', 'L2_Size', 'L1_Assoc', 'L2_Assoc', 'Time']].to_string(index=False))
 
 print("\nAnalysis complete. Plots generated with high-contrast colors.")
