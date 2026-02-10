@@ -1,4 +1,8 @@
 \documentclass[11pt, a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage{newpxtext}
+\usepackage{newpxmath}
+\usepackage{microtype}
 \usepackage{graphicx}
 \usepackage{amsmath}
 \usepackage{geometry}
@@ -11,8 +15,10 @@
 \geometry{a4paper, margin=1in}
 \pagestyle{fancy}
 \fancyhf{}
-\lhead{HPC Assignment 1 - Problem 1}
+\lhead{HPCA Assignment 1 - Problem 1}
 \rhead{\thepage}
+
+\usepackage{inconsolata}
 
 \lstset{
     basicstyle=\ttfamily\small,
@@ -22,11 +28,11 @@
 
 \title{Problem 1: Cache Hierarchy Optimization using gem5}
 \author{Rahate Tanishka Shivendra (22CS30043), Shivam Choudhury (22CS10072)}
+\date{}
 
 \begin{document}
 
 \maketitle
-
 \section{Introduction}
 This report details the investigation into cache hierarchy performance using the gem5 simulator. A memory-intensive matrix multiplication benchmark was run with a wide range of cache configurations to analyze the impact of L1/L2 cache sizes and associativities on execution time and miss rates. To fulfill the optional enhancements, the analysis was performed for three different matrix sizes: 64x64, 128x128, and 256x256, providing a comprehensive view of performance scaling.
 
@@ -87,7 +93,7 @@ A test run was performed with the default cache configuration to verify the setu
 The gem5 simulator generates detailed statistics in \texttt{stats.txt}. Key metrics from a sample run:
 
 \begin{lstlisting}[caption=Sample cache statistics from stats.txt]
-simSeconds                                   0.080250
+simSeconds                                  0.080250
 system.cpu.dcache.overallHits::total        130924
 system.cpu.dcache.overallMisses::total      1184
 system.cpu.dcache.overallMissRate::total    0.0090
@@ -124,7 +130,7 @@ When the L1 cache is insufficient, the L2 cache must minimize the penalty of mai
 \end{figure}
 
 \paragraph{Analysis:}
-The 256x256 matrix shows the highest sensitivity to L2 scaling. There is a sharp drop in execution time when the L2 size increases from 128kB to 256kB. From an HPCA perspective, this identifies the "critical working set" for this matrix multiplication kernel; at 128kB, the L2 is thrashing, but at 256kB and above, it can retain enough tiles to significantly lower the Average Memory Access Time (AMAT).
+The 256x256 matrix shows the highest sensitivity to L2 scaling. There is a sharp drop in execution time when the L2 size increases from 128kB to 256kB. So this identifies the "critical working set" for this matrix multiplication kernel; at 128kB, the L2 is thrashing, but at 256kB and above, it can retain enough tiles to significantly lower the Average Memory Access Time (AMAT).
 
 \subsection{Impact of Associativity}
 Associativity is designed to mitigate conflict misses by allowing a memory block to reside in multiple locations within a set.
@@ -151,15 +157,15 @@ L2 cache capacity is the most critical factor for the 256x256 workload. As seen 
     \centering
     \includegraphics[width=0.48\textwidth]{plot_heatmap_time_128x128.png}
     \includegraphics[width=0.48\textwidth]{plot_heatmap_time_256x256.png}
-    \caption{Execution Time Heatmaps for 128x128 (left) and 256x256 (right) matrices.}
+    \caption{Execution Time Heatmaps for 128x128 (left) and 256x256 (right) matrices. The 64x64 matrix heatmap is omitted as it shows negligible variation across all cache configurations due to its small working set fitting entirely within even the smallest L1 cache tested.}
     \label{fig:heatmaps}
 \end{figure}
 
 \subsection{Cost-Benefit Trade-off}
 The smallest cache configuration achieving near-peak performance for a $128 \times 128$ matrix is
-\textbf{L1 = 64\,kB / L2 = 128\,kB}, with an execution time of approximately $0.08\,\text{s}$.
+\textbf{L1 = 64\,kB , L2 = 128\,kB}, with an execution time of approximately $0.08\,\text{s}$.
 For the $256 \times 256$ matrix, the performance ``sweet spot'' is
-\textbf{L1 = 16\,kB / L2 = 512\,kB}.
+\textbf{L1 = 16\,kB , L2 = 512\,kB}.
 Interestingly, allocating a larger L1 cache provides little benefit and results in inefficient silicon usage
 when the L2 cache is sufficiently large to accommodate the $256 \times 256$ working set.
 

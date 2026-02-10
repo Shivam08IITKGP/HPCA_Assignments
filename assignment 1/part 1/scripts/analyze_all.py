@@ -52,49 +52,104 @@ full_dataset['L2_Size'] = pd.Categorical(full_dataset['L2_Size'], categories=l2_
 sns.set_theme(style="whitegrid", font_scale=1.1)
 
 plt.figure(figsize=(12, 7))
+
+plot1_data = full_dataset[full_dataset['L2_Size'] == '256kB']
+
 sns.lineplot(
-    data=full_dataset[full_dataset['L2_Size'] == '256kB'],
+    data=plot1_data,
     x='L1_Int',
     y='Time',
     hue='MatrixSize',
-    style='L1_Assoc',
+    units='L1_Assoc',
+    estimator=None,
+    linewidth=1.5,
+    alpha=0.35,
+    legend=False
+)
+sns.lineplot(
+    data=plot1_data,
+    x='L1_Int',
+    y='Time',
+    hue='MatrixSize',
+    linewidth=3,
     marker='o',
-    markersize=8,
-    palette='Dark2',
-    linewidth=3
+    palette='Dark2'
 )
 
-plt.xlabel('L1 Cache Size (kB)', fontsize=12)
-plt.ylabel('Execution Time (log scale)', fontsize=12)
+plt.xlabel("L1 Cache Size (kB)")
+plt.ylabel("Execution Time (log scale)")
 plt.yscale('log')
 plt.xticks(l1_sorted)
-plt.legend(title='Matrix Size / L1 Assoc', bbox_to_anchor=(1.02, 1), loc='upper left', borderaxespad=0)
-plt.title('Impact of L1 Cache Size on Execution Time', fontsize=16, weight='bold')
+plt.title(
+    "Impact of L1 Cache Size on Execution Time",
+    fontsize=16,
+    weight='bold'
+)
+
+plt.legend(
+    title="Matrix Size",
+    loc="center left",
+    bbox_to_anchor=(1.02, 0.5),
+    frameon=True
+)
 plt.tight_layout()
-plt.savefig(os.path.join(plot_output, 'plot_compare_l1_size_vs_time.png'), bbox_inches='tight')
-print("Saved Plot 1")
+plt.savefig(
+    os.path.join(plot_output, 'plot_compare_l1_size_vs_time.png'),
+    bbox_inches='tight'
+)
+
+print("Saved Plot 1 (L1 cache plot)")
 
 plt.figure(figsize=(12, 7))
+
+plot2_data = full_dataset[full_dataset['L1_Size'] == '16kB']
+
 sns.lineplot(
-    data=full_dataset[full_dataset['L1_Size'] == '16kB'],
+    data=plot2_data,
     x='L2_Int',
     y='Time',
     hue='MatrixSize',
-    style='L2_Assoc',
-    marker='s',
-    markersize=8,
-    palette='tab10',
-    linewidth=3
+    units='L2_Assoc',
+    estimator=None,
+    linewidth=1.5,
+    alpha=0.35,
+    legend=False
 )
-plt.title('Impact of L2 Cache Size on Execution Time (L1 Size = 16kB)', fontsize=16, weight='bold')
-plt.xlabel('L2 Cache Size (kB)', fontsize=12)
-plt.ylabel('Execution Time (log scale)', fontsize=12)
+
+sns.lineplot(
+    data=plot2_data,
+    x='L2_Int',
+    y='Time',
+    hue='MatrixSize',
+    linewidth=3,
+    marker='s',
+    palette='tab10'
+)
+
+plt.xlabel("L2 Cache Size (kB)")
+plt.ylabel("Execution Time (log scale)")
 plt.yscale('log')
 plt.xticks(l2_sorted)
-plt.legend(title='Matrix Size / L2 Assoc', bbox_to_anchor=(1.02, 1), loc='upper left')
+plt.title(
+    "Impact of L2 Cache Size on Execution Time (L1 Size = 16kB)",
+    fontsize=16,
+    weight='bold'
+)
+
+plt.legend(
+    title="Matrix Size",
+    loc="center left",
+    bbox_to_anchor=(1.02, 0.5),
+    frameon=True
+)
 plt.tight_layout()
-plt.savefig(os.path.join(plot_output, 'plot_compare_l2_size_vs_time.png'), bbox_inches='tight')
-print("Saved Plot 2")
+plt.savefig(
+    os.path.join(plot_output, 'plot_compare_l2_size_vs_time.png'),
+    bbox_inches='tight'
+)
+
+print("Saved Plot 2 (L2 cache plot)")
+
 
 fig = sns.catplot(
     data=full_dataset,
