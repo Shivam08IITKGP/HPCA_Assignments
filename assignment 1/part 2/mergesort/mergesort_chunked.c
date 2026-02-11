@@ -1,96 +1,140 @@
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 
-// 10MB total data / 4 bytes per int = 2,621,440 ints
-#define TOTAL_ELEMENTS 2621440
-#define ELEMENTS_PER_CHUNK 524288
-#define TOTAL_CHUNKS 5
-#define SEED 42
+/*
+    We have ~2.6M integers.
+    Instead of sorting everything at once,
+    we divide the data into 5 chunks and sort each chunk separately.
+*/
 
-void merge_arrays(int *data, int *buffer, int start, int middle, int end)
+#define TOTAL_NUMBERS     2621440
+#define CHUNK_SIZE        524288
+#define NUM_CHUNKS        5
+
+void merge(int *arr, int *temp, int left, int mid, int right)
 {
-    int left_ptr = start;
-    int right_ptr = middle + 1;
-    int buffer_ptr = start;
-
-    while (left_ptr <= middle && right_ptr <= end) {
-        buffer[buffer_ptr++] = (data[left_ptr] <= data[right_ptr]) 
-                                ? data[left_ptr++] 
-                                : data[right_ptr++];
+    int i = left;        
+    int j = mid + 1;     
+    int k = left;        
+    
+    while (i <= mid && j <= right) {
+        if (arr[i] <= arr[j])
+            temp[k++] = arr[i++];
+        else
+            temp[k++] = arr[j++];
     }
 
-    while (left_ptr <= middle) {
-        buffer[buffer_ptr++] = data[left_ptr++];
-    }
+    
+    while (i <= mid)
+        temp[k++] = arr[i++];
 
-    while (right_ptr <= end) {
-        buffer[buffer_ptr++] = data[right_ptr++];
-    }
+    while (j <= right)
+        temp[k++] = arr[j++];
 
-    for (int i = start; i <= end; i++) {
-        data[i] = buffer[i];
-    }
+    
+    for (int x = left; x <= right; x++)
+        arr[x] = temp[x];
 }
 
-void recursive_merge_sort(int *data, int *buffer, int start, int end)
+
+/* Standard recursive merge sort */
+void merge_sort(int *arr, int *temp, int left, int right)
 {
-    if (start >= end) return;
-    int middle = start + (end - start) / 2;
-    recursive_merge_sort(data, buffer, start, middle);
-    recursive_merge_sort(data, buffer, middle + 1, end);
-    merge_arrays(data, buffer, start, middle, end);
+    if (left >= right)
+        return;
+
+    int mid = left + (right - left) / 2;
+
+    merge_sort(arr, temp, left, mid);
+    merge_sort(arr, temp, mid + 1, right);
+
+    merge(arr, temp, left, mid, right);
 }
+
 
 int main(void)
 {
-    // Pre-allocate all memory
-    int *chunk_arrays[TOTAL_CHUNKS];
-    int *temp_buffer = malloc(ELEMENTS_PER_CHUNK * sizeof(int));
-    if (!temp_buffer) return 1;
+    FILE *fp = fopen("random_numbers.bin", "rb");
+    if (!fp) {
+        printf("Error: Could not open input file.\n");
+        return 1;
+    }
 
-    // Phase 1: Generate and Sort Chunks
-    srand(SEED); 
     
-    for (int chunk_id = 0; chunk_id < TOTAL_CHUNKS; chunk_id++) {
-        chunk_arrays[chunk_id] = malloc(ELEMENTS_PER_CHUNK * sizeof(int));
-        if (!chunk_arrays[chunk_id]) return 1;
+    int *chunks[NUM_CHUNKS];
+    int *temp = malloc(CHUNK_SIZE * sizeof(int));
+    if (!temp) {
+        printf("Memory allocation failed.\n");
+        fclose(fp);
+        return 1;
+    }
 
-        for(int i = 0; i < ELEMENTS_PER_CHUNK; i++) {
-            chunk_arrays[chunk_id][i] = rand();
+    
+    for (int c = 0; c < NUM_CHUNKS; c++) {
+
+        chunks[c] = malloc(CHUNK_SIZE * sizeof(int));
+        if (!chunks[c]) {
+            printf("Memory allocation failed for chunk %d\n", c);
+            return 1;
         }
 
-        recursive_merge_sort(chunk_arrays[chunk_id], temp_buffer, 
-                           0, ELEMENTS_PER_CHUNK - 1);
+        size_t read_count = fread(chunks[c], sizeof(int),
+                                  CHUNK_SIZE, fp);
+
+        if (read_count != CHUNK_SIZE) {
+            printf("Error while reading file.\n");
+            fclose(fp);
+            return 1;
+        }
+
+        
+        merge_sort(chunks[c], temp, 0, CHUNK_SIZE - 1);
     }
+
+    fclose(fp);
+    free(temp);
+
+    /*
+        Now all 5 chunks are sorted.
+        Next step: merge them together (k-way merge).
+    */
+
+    int *sorted_output = malloc(TOTAL_NUMBERS * sizeof(int));
+    if (!sorted_output) {
+        printf("Final allocation failed.\n");
+        return 1;
+    }
+
+    int index_in_chunk[NUM_CHUNKS] = {0};
+
     
-    free(temp_buffer);
+    for (int i = 0; i < TOTAL_NUMBERS; i++) {
 
-    // Phase 2: K-Way Merge
-    int *final_output = malloc(TOTAL_ELEMENTS * sizeof(int));
-    if (!final_output) return 1;
-    
-    int chunk_positions[TOTAL_CHUNKS] = {0};
+        int chosen_chunk = -1;
+        int smallest = 0;
 
-    for (int output_idx = 0; output_idx < TOTAL_ELEMENTS; output_idx++) {
-        int selected_chunk = -1;
-        int minimum_value = 0;
+        for (int c = 0; c < NUM_CHUNKS; c++) {
 
-        for (int chunk_id = 0; chunk_id < TOTAL_CHUNKS; chunk_id++) {
-            if (chunk_positions[chunk_id] < ELEMENTS_PER_CHUNK) {
-                int current_value = chunk_arrays[chunk_id][chunk_positions[chunk_id]];
-                if (selected_chunk == -1 || current_value < minimum_value) {
-                    minimum_value = current_value;
-                    selected_chunk = chunk_id;
+            if (index_in_chunk[c] < CHUNK_SIZE) {
+
+                int value = chunks[c][index_in_chunk[c]];
+
+                if (chosen_chunk == -1 || value < smallest) {
+                    smallest = value;
+                    chosen_chunk = c;
                 }
             }
         }
 
-        final_output[output_idx] = minimum_value;
-        chunk_positions[selected_chunk]++;
+        sorted_output[i] = smallest;
+        index_in_chunk[chosen_chunk]++;
     }
 
-    for (int i = 0; i < TOTAL_CHUNKS; i++) free(chunk_arrays[i]);
-    free(final_output);
+    
+    for (int c = 0; c < NUM_CHUNKS; c++)
+        free(chunks[c]);
+
+    free(sorted_output);
 
     return 0;
 }

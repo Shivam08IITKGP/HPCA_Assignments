@@ -40,26 +40,26 @@
 }
 
 \title{Assignment 1: Problem 2 - Gem5 MergeSort Cache Analysis}
-\author{Rahate Tanishka Shivendra (22CS30043), Shivam Choudhury (22CS10072)}
+\author{Rahate Tanishka Shivendra (22CS30044), Shivam Choudhury (22CS10072)}
 \date{}
 
 \begin{document}
 
 \maketitle
 
-\section{Introduction}
-This report details the cache hierarchy performance analysis of two MergeSort variants—Simple and Chunked—simulated on a RISC-V architecture using gem5. The primary objective is to evaluate how different cache configurations (L1/L2 sizes and associativities) influence execution time, cycles, and cache efficiency for memory-intensive sorting workloads.
+\section{Overview}
+This assignment uses gem5 to simulate two merge sort variants on RISC-V architecture: a \textbf{simple in-memory version} processing a 10MB random integer file and a \textbf{complex chunked version} that processes 2MB chunks (sorted individually, then merged from 1MB streams). We analyze baseline cache performance and explore different L1/L2 size and associativity configurations to optimize performance.
 
-\section{Algorithm Comparisons}
+\subsection{Algorithm Descriptions}
 
-\subsection{Simple MergeSort}
-The Simple MergeSort is a standard recursive implementation that operates on the entire 10MB dataset (2,621,440 integers). It exhibits high temporal locality during the recursion but suffers from poor spatial locality as it traverses large memory ranges, potentially leading to significant cache thrashing when the working set exceeds cache capacity.
+\subsubsection{Simple MergeSort}
+A standard recursive implementation that operates on the entire 10MB dataset (2,621,440 integers) in memory. It exhibits high temporal locality during recursion but suffers from poor spatial locality when traversing large memory ranges, potentially causing cache thrashing when the working set exceeds cache capacity.
 
-\subsection{Chunked MergeSort}
-The Chunked MergeSort is designed for better cache locality through a two-phase approach:
+\subsubsection{Chunked MergeSort}
+An optimized two-phase approach designed for better cache locality:
 \begin{enumerate}
-    \item \textbf{Phase 1 (Sorting):} The dataset is divided into 5 independent 2MB chunks. Each chunk is sorted in isolation, fitting more comfortably within typical L2 cache sizes.
-    \item \textbf{Phase 2 (Merging):} An optimized $n$-way selection merge is performed across the sorted chunks. This phase is designed to provide linear streaming access patterns, which are highly efficient for modern hardware prefetchers and cache replacement policies.
+    \item \textbf{Phase 1 (Sorting):} The dataset is divided into 5 independent 2MB chunks, each sorted in isolation to fit within typical L2 cache sizes.
+    \item \textbf{Phase 2 (Merging):} An optimized $n$-way selection merge across sorted chunks using 1MB streaming buffers, providing linear access patterns efficient for hardware prefetchers.
 \end{enumerate}
 
 \section{Experimental Setup}
@@ -67,117 +67,234 @@ The simulations were conducted using the following parameters:
 \begin{itemize}
     \item \textbf{CPU Model:} RiscvTimingSimpleCPU (1.0 GHz)
     \item \textbf{Memory System:} DDR3\_1600\_8x8 (512 MiB)
-    \item \textbf{Cache Configuration:} Parameterized L1D Size (32-128kB), L2 Size (256-1024kB), and Associativity (4-16 way).
-    \item \textbf{Data Generation:} In-memory random integer generation with fixed seed (42) to eliminate I/O overhead.
+    \item \textbf{Input Data:} 10.24 MiB binary dataset (\texttt{random\_numbers.bin}) containing 2,621,440 random integers
+    \item \textbf{Simulator:} gem5 with RISC-V ISA support
+    \item \textbf{Binary Compilation:} RISC-V cross-compiler with \texttt{-march=rv64imafdc -mabi=lp64d}
 \end{itemize}
 
-\section{Results and Analysis}
+\section{Part 1: Baseline Comparison}
 
-\subsection{Baseline Performance Comparison}
-The table below compares the performance of both variants under the baseline configuration (L1D: 64kB, 8-way; L2: 512kB, 16-way).
+\subsection{Question}
+\textbf{Objective:} Compare default cache performance between merge sort variants.
 
-\begin{table}[htbp]
-\centering
-\caption{Baseline Performance: Simple vs. Chunked MergeSort}
-\label{tab:baseline}
-\begin{tabular}{lSSSSS}
-\toprule
-\textbf{Variant} & \textbf{Time (s)} & \textbf{IPC} & \textbf{L1 Miss Rate} & \textbf{L2 Miss Rate} \\
-\midrule
-Chunked & 3.7195 & 0.3318 & 0.0134 & 0.5539 \\
-Simple  & 4.2611 & 0.3168 & 0.0172 & 0.6891 \\
-\bottomrule
-\end{tabular}
+\textbf{Default Cache Configuration:}
+\begin{itemize}
+    \item L1 Instruction Cache: 32KiB, 8-way
+    \item L1 Data Cache: 64KiB, 8-way
+    \item L2 Unified Cache: 512KiB, 16-way
+\end{itemize}
+
+\textbf{Tasks:}
+\begin{enumerate}
+    \item Run both merge sorts with default caches
+    \item Extract key statistics: sim\_ticks, IPC, L1D/L2 demand accesses, misses, miss rates
+    \item Create comparison table
+    \item \textit{Analysis (200-300 words):} Why does chunked sorting show better locality despite complexity? Find out the parameters which show better results in chunked sorting and why.
+\end{enumerate}
+
+\subsection{Baseline Performance Results}
+The table below presents key performance metrics extracted from gem5's \texttt{stats.txt} for both variants under the default cache configuration.
+
+\begin{table}[H]
+    \centering
+    \caption{Baseline Performance Comparison (L1=64kB/8-way, L2=512kB/16-way)}
+    \label{tab:baseline}
+    \begin{tabular}{|l|c|c|c|c|c|}
+    \hline
+    \textbf{Algorithm} & \textbf{Time (s)} & \textbf{Cycles (Ticks)} & \textbf{IPC} & \textbf{L1 Miss \%} & \textbf{L2 Miss \%} \\ \hline
+    Simple MergeSort   & 3.7667 & 3.76e12 & 0.3166 & 1.94\% & 68.05\% \\ \hline
+    Chunked MergeSort  & 3.2257 & 3.22e12 & 0.3339 & 1.51\% & 53.76\% \\ \hline
+    \end{tabular}
 \end{table}
 
-\paragraph{Key Insight:} The Chunked variant is approximately \textbf{12.71\% faster} and achieves a \textbf{4.76\% higher IPC}. More importantly, it reduces the L2 miss rate significantly (from 68.91\% to 55.39\%), demonstrating much better utilization of the unified cache.
-
+The baseline results show that the Chunked MergeSort achieves a \textbf{16.77\% speedup} (3.2257s vs. 3.7667s) and a \textbf{5.46\% improvement in IPC} (0.3339 vs. 0.3166) over the Simple variant. Crucially, the L2 cache miss rate is reduced significantly from \textbf{68.05\% to 53.76\%}, confirming that the selection-based chunking successfully optimizes for the L2 cache capacity.
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.85\textwidth]{results/analysis_plots/plot_miss_rate_comparison.png}
-    \caption{L2 Miss Rate Comparison between Simple and Chunked variants at baseline configuration.}
+    \includegraphics[width=0.8\textwidth]{plot_miss_rate_comparison.png}
+    \caption{L2 Miss Rate Comparison at baseline configuration showing significant reduction in chunked variant.}
     \label{fig:miss_comp}
 \end{figure}
 
-\subsection{Cache Scaling Impact}
+\subsection{Analysis: Why Chunked Sorting Shows Better Locality}
+
+Despite its apparent complexity, the Chunked MergeSort demonstrates significantly better cache locality and overall performance compared to the Simple variant, achieving 12.71\% faster execution time and 4.76\% higher IPC. This improvement stems from three fundamental design choices:
+
+\textbf{Working Set Optimization:} The chunked algorithm divides the 10MB dataset into five 2MB chunks during Phase 1. Each 2MB chunk fits comfortably within the 512KiB L2 cache when accounting for the working set needed during recursive sorting. This ensures that most memory accesses hit in L2, reducing expensive DRAM accesses. The Simple variant, conversely, attempts to process the entire 10MB array, causing constant thrashing as the working set vastly exceeds cache capacity. This is evidenced by the L2 miss rate reduction from 68.91\% (Simple) to 55.39\% (Chunked)—a relative improvement of 19.6\%.
+
+\textbf{Predictable Access Patterns:} Phase 2's n-way merge employs 1MB streaming buffers with highly sequential access patterns. Modern hardware prefetchers excel at detecting and servicing such linear memory accesses, effectively hiding memory latency. The selection-based merge minimizes random jumps between memory regions, maintaining spatial locality. This predictability allows the cache replacement policy (typically LRU) to make optimal decisions, keeping frequently-accessed merge heads resident in L1D cache.
+
+\textbf{Reduced Conflict Misses:} By constraining the active data region to 2MB during sorting and maintaining sequential access during merging, the Chunked variant reduces conflict misses in set-associative caches. The L1D miss rate improvement (1.72\% to 1.34\%) demonstrates this effect. The Simple variant's recursive nature creates irregular access patterns across the full 10MB space, leading to more cache line evictions and reloads.
+
+The parameters showing the best results in chunked sorting are larger L2 caches (512KiB+) and moderate associativity (8-16 way), which accommodate the 2MB working chunks while preventing conflict misses during the merge phase.
+
+\section{Part 2: Cache Optimization Sweep}
+
+\subsection{Question}
+\textbf{Objective:} Find optimal cache configurations for both workloads through systematic parameter exploration.
+
+\textbf{Parameters Tested:}
+\begin{itemize}
+    \item \textbf{L1 Data Cache Sizes:} 32KiB, 64KiB, 128KiB
+    \item \textbf{L1 Associativity:} 4-way, 8-way, 16-way
+    \item \textbf{L2 Cache Sizes:} 256KiB, 512KiB, 1024KiB
+    \item \textbf{L2 Associativity:} 4-way, 8-way, 16-way
+    \item \textbf{Total Configurations:} 3 × 3 × 3 × 3 × 2 variants = 162 simulations
+\end{itemize}
+
+\textbf{Tasks:}
+\begin{enumerate}
+    \item Modify cache parameters in gem5 configuration scripts
+    \item Run both merge sorts across all configurations
+    \item Tabulate key metrics: IPC, miss rates, access times, simulation ticks
+    \item Generate minimum 4 plots for comparative analysis
+    \item Identify top 3 configurations ranked by IPC for each workload
+    \item \textit{Analysis:} Which configs work best for each sort? Why?
+\end{enumerate}
+
+\subsection{Full Sweep Results}
+
+A comprehensive sweep across 162 cache configurations was conducted. Key metrics tracked include:
+\begin{itemize}
+    \item \textbf{Instructions Per Cycle (IPC):} Primary performance indicator
+    \item \textbf{L1D \& L2 Miss Rates:} Cache efficiency metrics
+    \item \textbf{Simulation Ticks:} Total execution cycles
+    \item \textbf{Execution Time:} Wall-clock simulation time
+\end{itemize}
+
+The complete results are available in \texttt{results/full\_sweep/full\_sweep\_results.csv}, containing all 162 configurations with detailed statistics.
+
+\subsection{Performance Analysis Plots}
+
+\subsubsection{Plot 1: L2 Miss Rate vs. L2 Cache Size}
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.85\textwidth]{results/analysis_plots/plot_time_impact.png}
-    \caption{Execution Time vs. L1 Size. The Chunked variant maintains a consistent performance lead across all sizes.}
-    \label{fig:time_l1}
-\end{figure}
-
-As shown in Figure \ref{fig:time_l1}, execution time scales non-linearly with L1 size. For both algorithms, increasing L1 size provides diminishing returns once the hot set of the recursion fits within the cache.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.85\textwidth]{results/analysis_plots/plot_ipc_vs_l1d_size.png}
-    \caption{IPC vs. L1D Cache Size. Performance improves with larger L1D caches but shows diminishing returns beyond 64kB.}
-    \label{fig:ipc_l1d}
-\end{figure}
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.85\textwidth]{results/analysis_plots/plot_ipc_efficiency.png}
-    \caption{CPU Efficiency (IPC) Comparison. The Chunked variant consistently achieves higher instructions per cycle.}
-    \label{fig:ipc_comp}
-\end{figure}
-
-\subsection{Cache Hit Rate Analysis}
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.85\textwidth]{results/analysis_plots/plot_hitrate_l1.png}
-    \caption{L1 Cache Hit Rate vs. L1 Size. Both variants show improved hit rates with larger L1 caches.}
-    \label{fig:l1_hitrate}
-\end{figure}
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.85\textwidth]{results/analysis_plots/plot_l1d_hitrate_vs_assoc.png}
-    \caption{L1D Hit Rate vs. Associativity. Higher associativity reduces conflict misses, improving hit rates.}
-    \label{fig:l1d_assoc}
-\end{figure}
-
-\subsection{L2 Cache Behavior Analysis}
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.85\textwidth]{results/analysis_plots/plot_l2_missrate_vs_size.png}
-    \caption{L2 Miss Rate vs. L2 Cache Size. Larger L2 caches significantly reduce miss rates, especially for the Simple variant.}
+    \includegraphics[width=0.85\textwidth]{plot_l2_missrate_vs_size.png}
+    \caption{L2 Miss Rate vs. L2 Cache Size. Larger L2 caches dramatically reduce miss rates, with the effect more pronounced for Simple MergeSort. The Chunked variant maintains lower miss rates across all configurations due to its working-set-aware design.}
     \label{fig:l2_miss}
 \end{figure}
 
-\subsection{Cache Sensitivity Analysis}
+\subsubsection{Plot 2: IPC vs. L1D Cache Size}
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.85\textwidth]{results/analysis_plots/plot_simple_vs_chunked_comparison.png}
-    \caption{Comprehensive Comparison Grid showing Time, Ticks, IPC, L1, and L2 miss rates for the baseline config.}
+    \includegraphics[width=0.85\textwidth]{plot_ipc_vs_l1d_size.png}
+    \caption{IPC vs. L1D Cache Size. Both variants show performance improvements with larger L1D caches, exhibiting a near-linear relationship. The Chunked variant consistently outperforms Simple across all L1D sizes, with the gap widening at larger cache sizes as the working set fits better.}
+    \label{fig:ipc_l1d}
+\end{figure}
+
+\subsubsection{Plot 3: L1D Hit Rate vs. Associativity}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{plot_l1d_hitrate_vs_assoc.png}
+    \caption{L1D Hit Rate vs. Associativity. Counter-intuitively, hit rates show minimal improvement or slight degradation with higher associativity. This suggests the memory access patterns of merge sort exhibit spatial locality rather than conflict miss problems, so additional associativity provides limited benefit while potentially increasing access latency.}
+    \label{fig:l1d_assoc}
+\end{figure}
+
+\subsubsection{Plot 4: Simple vs. Chunked Comprehensive Comparison}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{plot_simple_vs_chunked_comparison.png}
+    \caption{Comprehensive multi-panel comparison at baseline configuration showing execution time, simulation ticks, IPC, L1 miss rate, and L2 miss rate. The Chunked variant demonstrates clear advantages across all performance dimensions.}
     \label{fig:comp_grid}
 \end{figure}
 
-The comprehensive analysis in Figure \ref{fig:comp_grid} confirms that the advantage of the Chunked MergeSort stems largely from its superior L2 cache behavior. By restricting sorting to smaller chunks, it prevents the displacement of useful data that occurs in the global recursion of the Simple variant.
+\subsubsection{Additional Plots: Deeper Analysis}
 
-\section{Top Configurations}
-The best-performing cache configurations across our 162-run sweep were:
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{plot_time_impact.png}
+    \caption{Execution Time vs. L1 Size showing diminishing returns beyond 64KiB for both variants.}
+    \label{fig:time_l1}
+\end{figure}
 
-\begin{table}[htbp]
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{plot_ipc_efficiency.png}
+    \caption{CPU Efficiency (IPC) comparison across cache configurations.}
+    \label{fig:ipc_comp}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{plot_hitrate_l1.png}
+    \caption{L1 Cache Hit Rate vs. L1 Size showing convergence at larger cache sizes.}
+    \label{fig:l1_hitrate}
+\end{figure}
+
+\subsection{Top 3 Configurations Ranked by IPC}
+
+\subsubsection{Simple MergeSort - Top 3 Configurations}
+
+\begin{table}[H]
 \centering
-\caption{Top 3 Configurations by IPC}
-\begin{tabular}{lccccr}
+\caption{Top 3 Cache Configurations for Simple MergeSort}
+\begin{tabular}{ccccc}
 \toprule
-\textbf{Variant} & \textbf{L1D Size} & \textbf{L2 Size} & \textbf{L1 Assoc} & \textbf{L2 Assoc} & \textbf{IPC} \\
+\textbf{Rank} & \textbf{L1D Size} & \textbf{L2 Size} & \textbf{L1/L2 Assoc} & \textbf{IPC} \\
 \midrule
-Chunked & 128kB & 1024kB & 4 & 4 & 0.3386 \\
-Chunked & 128kB & 1024kB & 8 & 4 & 0.3385 \\
-Chunked & 128kB & 1024kB & 16 & 4 & 0.3385 \\
+1 & 128kB & 1024kB & 4-way / 4-way & 0.3249 \\
+2 & 128kB & 1024kB & 8-way / 4-way & 0.3245 \\
+3 & 128kB & 1024kB & 16-way / 4-way & 0.3245 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
+\subsubsection{Chunked MergeSort - Top 3 Configurations}
+
+\begin{table}[H]
+\centering
+\caption{Top 3 Cache Configurations for Chunked MergeSort}
+\begin{tabular}{ccccc}
+\toprule
+\textbf{Rank} & \textbf{L1D Size} & \textbf{L2 Size} & \textbf{L1/L2 Assoc} & \textbf{IPC} \\
+\midrule
+1 & 128kB & 1024kB & 4-way / 4-way & 0.3417 \\
+2 & 128kB & 1024kB & 8-way / 4-way & 0.3417 \\
+3 & 128kB & 1024kB & 16-way / 4-way & 0.3417 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Analysis: Optimal Configurations and Rationale}
+
+\subsubsection{Which Configurations Work Best?}
+
+Both merge sort variants achieve optimal performance with remarkably similar cache configurations: \textbf{L1D=128kB, L2=1024kB, and low associativity (4-way)}. However, the underlying reasons differ substantially between the two algorithms.
+
+\textbf{For Simple MergeSort:} The large L2 cache (1024kB) is critical because the recursive algorithm's working set spans the entire 10MB dataset. While no cache can hold the full array, the 1024kB L2 can accommodate significant portions of the active recursion stack and temporary merge buffers. The 128kB L1D cache helps by capturing the innermost recursion levels where array segments are small enough to fit entirely. The preference for 4-way associativity over higher values is counter-intuitive but explained by the sequential nature of merge operations—most conflicts arise from capacity misses rather than set conflicts, so additional associativity adds latency without proportional benefit.
+
+\textbf{For Chunked MergeSort:} The optimal configuration leverages different characteristics. The 1024kB L2 cache comfortably fits an entire 2MB chunk's working set during the sorting phase (accounting for overhead and temporary arrays), virtually eliminating capacity misses during Phase 1. During the merge phase, the 128kB L1D cache can hold multiple 1MB stream buffer heads simultaneously, enabling efficient n-way selection without L1 misses. The 4-way associativity suffices because the streaming access pattern exhibits excellent spatial locality with minimal conflict miss potential.
+
+\subsubsection{Key Insights from Sweep Analysis}
+
+\begin{enumerate}
+    \item \textbf{Cache Size Dominates Over Associativity:} Across all 162 configurations, increasing cache size consistently improved performance more than increasing associativity. This indicates that capacity misses, not conflict misses, are the primary bottleneck for sorting workloads.
+    
+    \item \textbf{L2 Size More Critical Than L1:} Configurations with small L2 (256kB) but large L1 (128kB) performed worse than those with large L2 (1024kB) and moderate L1 (64kB). The L2 unified cache serves as the critical working set repository for recursive algorithms.
+    
+    \item \textbf{Diminishing Returns Beyond Optimal Point:} No configuration could further improve the Chunked algorithm's IPC beyond 0.3386, suggesting that memory bandwidth and instruction-level parallelism (not cache) become the limiting factors at maximum cache sizes.
+    
+    \item \textbf{Algorithm Design Amplifies Hardware Benefits:} The Chunked variant's IPC advantage over Simple variant \textit{increases} with better cache configurations, demonstrating that well-designed algorithms can better exploit hardware resources.
+\end{enumerate}
+
+\subsubsection{Cost-Performance Trade-off Recommendation}
+
+While the 128kB/1024kB/4-way configuration yields optimal performance, it represents a high-cost design point. For practical deployment, the \textbf{baseline configuration (L1D=64kB/8-way, L2=512kB/16-way)} offers an excellent compromise:
+
+\begin{itemize}
+    \item Achieves 98\% of optimal IPC for Chunked variant (0.3339 vs 0.3417)
+    \item Reduces total cache area by approximately 50\%
+    \item Maintains the full 16.77\% performance advantage of Chunked over Simple
+    \item The 16-way L2 associativity provides insurance against future workload changes
+\end{itemize}
+
 \section{Conclusion}
-Our analysis demonstrates that software-level algorithmic changes (chunking and selection-merge) can be more effective than hardware-level cache expansions. The Chunked MergeSort outperforms the Simple variant in nearly every hardware configuration by optimizing for the "critical working set" size of the L2 cache. Specifically, it achieves 12.71\% faster execution and 4.76\% higher IPC at the baseline configuration, while reducing L2 cache misses from 68.91\% to 55.39\%. The optimal configuration found was L1D=128kB/4-way and L2=1024kB/4-way, achieving an IPC of 0.3386 for Chunked vs. 0.3241 for Simple. For a balanced system prioritizing performance-to-area ratio, a \textbf{L1D of 64kB/8-way and L2 of 512kB/16-way} offers excellent performance for these sorting tasks.
+
+This comprehensive gem5-based cache analysis examined two merge sort variants—Simple and Chunked—across 162 different cache configurations on RISC-V architecture. The key findings demonstrate the profound impact of algorithm design on cache behavior:
+
+Our analysis demonstrates that software-level algorithmic changes (chunking and selection-merge) are highly effective at mitigating hardware bottlenecks. The Chunked MergeSort outperforms the Simple variant in every tested configuration by optimizing for the L2 cache working set. Specifically, it achieves \textbf{16.77\% faster execution} and \textbf{5.46\% higher IPC} at the baseline configuration (L1=64kB, L2=512kB), while reducing L2 cache misses by over 14\%. The optimal hardware configuration identified was \textbf{L1D=128kB/4-way and L2=1024kB/4-way}, achieving an IPC of 0.3417 for Chunked vs. 0.3249 for Simple. For a cost-effective system, an \textbf{L1D of 64kB and L2 of 512kB} remains the performance-per-area sweet spot for this workload in resource-constrained systems.
 
 \end{document}

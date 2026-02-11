@@ -1,6 +1,6 @@
 # Assignment 1: Problem 2 - Gem5 MergeSort Cache Analysis
 
-**Authors:** Rahate Tanishka Shivendra (22CS30043), Shivam Choudhury (22CS10072)
+**Authors:** Rahate Tanishka Shivendra (22CS30044), Shivam Choudhury (22CS10072)
 
 This directory contains the gem5 simulation scripts and results for Problem 2, which analyzes the cache performance of Simple vs. Chunked MergeSort implementations on a RISC-V architecture.
 
@@ -10,19 +10,23 @@ part 2/
 ├── configs/
 │   └── cache_config.py           # gem5 cache hierarchy configuration
 ├── mergesort/
-│   ├── mergesort_simple.c        # Standard recursive mergesort (provided)
+│   ├── mergesort_simple.c        # Standard recursive mergesort
 │   ├── mergesort_s               # Simple variant binary
-│   ├── mergesort_chunked.c       # Cache-optimized chunked mergesort (provided)
+│   ├── mergesort_chunked.c       # Cache-optimized chunked mergesort
 │   ├── mergesort_c               # Chunked variant binary
-│   ├── simple-riscv_mergesort_simple.py   # gem5 config for simple
-│   └── simple-riscv_mergesort_chunked.py  # gem5 config for chunked
+│   ├── simple-riscv_mergesort_simple.py   # gem5 config for simple (provided)
+│   ├── simple-riscv_mergesort_chunked.py  # gem5 config for chunked (provided)
+│   └── random_numbers.bin        # 10 MB input data 
 ├── scripts/
 │   ├── full_sweep.py             # Full multi-parameter sweep for both variants
-│   ├── plot.py                   # Generate all analysis plots
-│   └── baseline_analysis.py      # Extract baseline comparison table
+│   ├── full_sweep_static.py      # Full sweep using static binaries
+│   ├── verify_locality.py        # Verification sweep (subset of configs)
+│   ├── analyze_all.py            # Generate all analysis plots & statistics
+│   └── compare_early_results.py  # Compare results across runs
 ├── results/
-│   ├── full_sweep/               # Full sweep results CSV
-│   └── analysis_plots/           # Generated plots
+│   ├── full_sweep/               # Full sweep results (162 configs)
+│   │   └── full_sweep_results.csv
+│   └── analysis_plots/           # Generated plots (8 plots)
 └── report.tex                     # LaTeX report
 ```
 
@@ -30,7 +34,7 @@ part 2/
 - gem5 simulator with RISC-V support: `/home/tishya/shivam/hpc/gem5/build/RISCV/gem5.opt`
 - RISC-V cross-compiler: `/home/tishya/shivam/hpc/gem5/riscv-toolchain/riscv/bin/`
 - Python 3 with pandas, matplotlib, seaborn
-- **Input data**: `random_numbers.bin` (10 MB random integers) - must be in parent directory
+- **Input data**: `random_numbers.bin` (10 MB random integers) - generated in-memory by benchmark
 
 ## Algorithm Comparison
 
@@ -91,7 +95,21 @@ python3 scripts/full_sweep.py --force
 
 **Output:** `results/full_sweep/full_sweep_results.csv`
 
-### Part 3: Analysis & Visualization
+### Part 3: Verification Sweep (Optional)
+
+A focused subset of configurations to verify locality improvements:
+
+```bash
+python3 scripts/verify_locality.py
+```
+
+**Configurations tested:**
+- L1=32kB/4-way, L2=512kB/4-way (both Simple & Chunked)
+- L1=64kB/8-way, L2=1024kB/8-way (both Simple & Chunked)
+
+**Output:** Results stored in `results/verification_sweep/` (4 configurations)
+
+### Part 4: Analysis & Visualization
 
 Generate all 8 required plots and summary statistics:
 
@@ -139,10 +157,10 @@ python3 scripts/analyze_all.py
 export PATH=/home/tishya/shivam/hpc/gem5/riscv-toolchain/riscv/bin:$PATH
 
 # Simple variant
-riscv64-unknown-linux-gnu-gcc -O2 -static mergesort/mergesort_simple.c \
+riscv64-unknown-linux-gnu-gcc -O2 mergesort/mergesort_simple.c \
     -o mergesort/mergesort_s -march=rv64imafdc -mabi=lp64d
 
 # Chunked variant
-riscv64-unknown-linux-gnu-gcc -O2 -static mergesort/mergesort_chunked.c \
+riscv64-unknown-linux-gnu-gcc -O2 mergesort/mergesort_chunked.c \
     -o mergesort/mergesort_c -march=rv64imafdc -mabi=lp64d
 ```

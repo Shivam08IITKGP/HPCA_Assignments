@@ -1,60 +1,96 @@
+#include <stdio.h>
 #include <stdlib.h>
 
-// 10MB total data / 4 bytes per int = 2,621,440 ints
-#define ARRAY_LENGTH 2621440
-#define SEED 42
+/*
+    This version reads the entire dataset at once
+    and performs a standard recursive merge sort.
+*/
 
-void merge_arrays(int *data, int *buffer, int start, int middle, int end)
+#define TOTAL_NUMBERS 2621440
+
+
+/* Merge two sorted halves inside arr[] */
+void merge(int *arr, int *temp, int left, int mid, int right)
 {
-    int left_ptr = start;
-    int right_ptr = middle + 1;
-    int buffer_ptr = start;
+    int i = left;        // pointer for left half
+    int j = mid + 1;     // pointer for right half
+    int k = left;        // pointer for temp array
 
-    while (left_ptr <= middle && right_ptr <= end) {
-        buffer[buffer_ptr++] = (data[left_ptr] <= data[right_ptr]) 
-                                ? data[left_ptr++] 
-                                : data[right_ptr++];
+    // Compare elements from both halves
+    while (i <= mid && j <= right) {
+        if (arr[i] <= arr[j])
+            temp[k++] = arr[i++];
+        else
+            temp[k++] = arr[j++];
     }
 
-    while (left_ptr <= middle) {
-        buffer[buffer_ptr++] = data[left_ptr++];
-    }
+    // Copy any remaining elements
+    while (i <= mid)
+        temp[k++] = arr[i++];
 
-    while (right_ptr <= end) {
-        buffer[buffer_ptr++] = data[right_ptr++];
-    }
+    while (j <= right)
+        temp[k++] = arr[j++];
 
-    for (int i = start; i <= end; i++) {
-        data[i] = buffer[i];
-    }
+    // Copy merged section back into original array
+    for (int x = left; x <= right; x++)
+        arr[x] = temp[x];
 }
 
-void recursive_merge_sort(int *data, int *buffer, int start, int end)
+
+/* Standard recursive merge sort */
+void merge_sort(int *arr, int *temp, int left, int right)
 {
-    if (start >= end) return;
-    int middle = start + (end - start) / 2;
-    recursive_merge_sort(data, buffer, start, middle);
-    recursive_merge_sort(data, buffer, middle + 1, end);
-    merge_arrays(data, buffer, start, middle, end);
+    if (left >= right)
+        return;
+
+    int mid = left + (right - left) / 2;
+
+    merge_sort(arr, temp, left, mid);
+    merge_sort(arr, temp, mid + 1, right);
+
+    merge(arr, temp, left, mid, right);
 }
+
 
 int main(void)
 {
-    int *dataset = malloc(ARRAY_LENGTH * sizeof(int));
-    int *workspace = malloc(ARRAY_LENGTH * sizeof(int));
-    
-    if (!dataset || !workspace) return 1;
-
-    // Generate same random sequence in-memory
-    srand(SEED);
-    for(int i = 0; i < ARRAY_LENGTH; i++) {
-        dataset[i] = rand();
+    FILE *fp = fopen("random_numbers.bin", "rb");
+    if (!fp) {
+        printf("Error: Could not open input file.\n");
+        return 1;
     }
 
-    // Run the sort
-    recursive_merge_sort(dataset, workspace, 0, ARRAY_LENGTH - 1);
+    // Allocate memory for full dataset
+    int *numbers = malloc(TOTAL_NUMBERS * sizeof(int));
+    int *temp = malloc(TOTAL_NUMBERS * sizeof(int));
 
-    free(dataset);
-    free(workspace);
+    if (!numbers || !temp) {
+        printf("Memory allocation failed.\n");
+        fclose(fp);
+        free(numbers);
+        free(temp);
+        return 1;
+    }
+
+    // Read entire file into memory
+    size_t read_count = fread(numbers, sizeof(int),
+                              TOTAL_NUMBERS, fp);
+
+    if (read_count != TOTAL_NUMBERS) {
+        printf("Error while reading file.\n");
+        fclose(fp);
+        free(numbers);
+        free(temp);
+        return 1;
+    }
+
+    fclose(fp);
+
+    // Perform merge sort on full dataset
+    merge_sort(numbers, temp, 0, TOTAL_NUMBERS - 1);
+
+    free(numbers);
+    free(temp);
+
     return 0;
 }

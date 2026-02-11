@@ -1,3 +1,4 @@
 mergesort/*_static.c
+mergesort/*_static
 results/static_experiment/
 scripts/full_sweep_static.py

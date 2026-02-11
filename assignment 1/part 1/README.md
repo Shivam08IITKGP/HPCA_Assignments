@@ -1,6 +1,6 @@
 # Assignment 1: Problem 1 - Cache Hierarchy Optimization
 
-**Authors:** Rahate Tanishka Shivendra (22CS30043), Shivam Choudhury (22CS10072)
+**Authors:** Rahate Tanishka Shivendra (22CS30044), Shivam Choudhury (22CS10072)
 
 This directory contains the gem5 simulation scripts and results for Problem 1, which investigates the impact of cache parameters on a matrix multiplication workload across multiple matrix sizes (64x64, 128x128, 256x256).
 
