@@ -4,68 +4,103 @@ import csv
 import multiprocessing
 import os
 
-script_location = os.path.dirname(os.path.abspath(__file__))
-gem5_base = "/home/tishya/shivam/hpc/gem5"
+# get the folder where this script is
+script_dir = os.path.dirname(os.path.abspath(__file__))
 
-gem5_binary = os.path.join(gem5_base, "build/RISCV/gem5.opt")
-config_file = os.path.join(script_location, "../configs/cache_config.py")
-benchmark_binary = os.path.join(script_location, "../benchmarks/matrix_multiply")
-results_base = os.path.join(script_location, "../results")
-output_csv = os.path.join(results_base, "l1_sweep_results.csv")
+# path to gem5 stuff
+gem5_path = "/home/tishya/shivam/hpc/gem5"
 
-cache_sizes = ["16kB", "32kB", "64kB", "128kB", "256kB"]
+gem5_bin = os.path.join(gem5_path, "build/RISCV/gem5.opt")
+config = os.path.join(script_dir, "../configs/cache_config.py")
+bench = os.path.join(script_dir, "../benchmarks/matrix_multiply")
+res_dir = os.path.join(script_dir, "../results")
+out_csv = os.path.join(res_dir, "l1_sweep_results.csv")
 
-def execute_sim(cache_size):
-    output_path = os.path.join(results_base, f"l1_{cache_size}")
-    os.makedirs(output_path, exist_ok=True)
-    
-    command = [
-        gem5_binary,
-        "-d", output_path,
-        config_file,
-        f"--l1d_size={cache_size}",
-        f"--binary={benchmark_binary}"
-    ]
-    
-    print(f"-> Launching {cache_size} simulation...")
-    
+# different L1 cache sizes to try
+sizes = ["16kB", "32kB", "64kB", "128kB", "256kB"]
+
+def run_one_sim(sz):
+    # make output folder for this size
+    out_dir = os.path.join(res_dir, "l1_" + sz)
+    if not os.path.exists(out_dir):
+        os.makedirs(out_dir)
+
+    # build the command to run gem5
+    cmd = []
+    cmd.append(gem5_bin)
+    cmd.append("-d")
+    cmd.append(out_dir)
+    cmd.append(config)
+    cmd.append("--l1d_size=" + sz)
+    cmd.append("--binary=" + bench)
+
+    print("-> Launching " + sz + " simulation...")
+
     try:
-        subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        
-        stats_file = os.path.join(output_path, "stats.txt")
-        
-        if not os.path.exists(stats_file):
-            return [cache_size, "Error: No Stats", 0, 0]
+        result = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-        with open(stats_file, "r") as f:
-            file_content = f.read()
-            
-            time_val = re.search(r"simSeconds\s+([0-9\.e\-]+)", file_content)
-            execution_time = time_val.group(1) if time_val else "N/A"
-            
-            hit_pattern = re.search(r"system\.cpu\.dcache\.overallHits::total\s+(\d+)", file_content)
-            total_hits = hit_pattern.group(1) if hit_pattern else "0"
-            
-            miss_pattern = re.search(r"system\.cpu\.dcache\.overallMisses::total\s+(\d+)", file_content)
-            total_misses = miss_pattern.group(1) if miss_pattern else "0"
-            
-            return [cache_size, execution_time, total_hits, total_misses]
+        # check for the stats file
+        stats_path = os.path.join(out_dir, "stats.txt")
+
+        found = os.path.exists(stats_path)
+        if found == False:
+            return [sz, "Error: No Stats", 0, 0]
+
+        # read stats file
+        f = open(stats_path, "r")
+        data=f.read()
+        f.close()
+
+        # find sim time
+        m = re.search(r"simSeconds\s+([0-9\.e\-]+)", data)
+        if m:
+            sim_time=m.group(1)
+        else:
+            sim_time="N/A"
+
+        # find hits
+        m2 = re.search(r"system\.cpu\.dcache\.overallHits::total\s+(\d+)", data)
+        if m2:
+            hits= m2.group(1)
+        else:
+            hits="0"
+
+        # find misses
+        m3 = re.search(r"system\.cpu\.dcache\.overallMisses::total\s+(\d+)", data)
+        if m3:
+            misses=m3.group(1)
+        else:
+            misses = "0"
+
+        row = [sz, sim_time, hits, misses]
+        return row
 
     except Exception as e:
-        return [cache_size, f"Error: {str(e)}", 0, 0]
+        err_msg =str(e)
+        return [sz, "Error: " + err_msg, 0, 0]
 
 if __name__ == "__main__":
-    os.makedirs(results_base, exist_ok=True)
-    
-    worker_count = min(multiprocessing.cpu_count(), len(cache_sizes))
-    print(f"Starting parallel sweep on {worker_count} cores...")
-    
-    with multiprocessing.Pool(worker_count) as pool:
-        sweep_results = pool.map(execute_sim, cache_sizes)
-    
-    with open(output_csv, "w", newline="") as f:
-        csv_writer = csv.writer(f)
-        csv_writer.writerow(["L1_Size", "Execution_Time", "Hits", "Misses"])
-        csv_writer.writerows(sweep_results)
-        
-    print(f"\nSweep Complete! Data saved to:\n{output_csv}")
+    if not os.path.exists(res_dir):
+        os.makedirs(res_dir)
+
+    num_cores=multiprocessing.cpu_count()
+    num_workers=min(num_cores, len(sizes))
+    print("Starting parallel sweep on " + str(num_workers) + " cores...")
+
+    pool =multiprocessing.Pool(num_workers)
+    results= pool.map(run_one_sim, sizes)
+    pool.close()
+    pool.join()
+
+    # write results to csv
+    f =open(out_csv, "w", newline="")
+    writer =csv.writer(f)
+    header =["L1_Size", "Execution_Time", "Hits", "Misses"]
+    writer.writerow(header)
+    for r in results:
+        writer.writerow(r)
+    f.close()
+
+    print("")
+    print("Sweep Complete! Data saved to:")
+    print(out_csv)
