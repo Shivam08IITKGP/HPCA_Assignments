@@ -65,12 +65,10 @@ python3 scripts/analyze_all.py
 **Output:**
 ```
 ============================================================
-PART 1: BASELINE CACHE PERFORMANCE COMPARISON
-============================================================
-                Execution Time (s)  Simulation Ticks  Instructions Per Cycle  L1 Data Miss Rate  L2 Miss Rate
-Mergesort Type                                                                                               
-Chunked                   3.719479     3719479232000                0.331840           0.013387      0.553889
-Simple                    4.261141     4261141217000                0.316764           0.017239      0.689102
+Algorithm          | Time (s) | Cycles (Ticks) | IPC    | L1 Miss % | L2 Miss %
+-------------------|----------|----------------|--------|-----------|----------
+Simple MergeSort   | 3.7667   | 3.76e12        | 0.3166 | 1.94%     | 68.05%
+Chunked MergeSort  | 3.2257   | 3.22e12        | 0.3339 | 1.51%     | 53.76%
 ============================================================
 ```
 
