@@ -1,77 +1,96 @@
-#include <stdio.h>
 #include <stdlib.h>
+#include <stdio.h>
 
-#define ARR_SIZE      2621440  // 10MB total
-#define CHUNK_SIZE    524288   // 2MB chunks (ARR_SIZE / 5)
+// 10MB total data / 4 bytes per int = 2,621,440 ints
+#define TOTAL_ELEMENTS 2621440
+#define ELEMENTS_PER_CHUNK 524288
+#define TOTAL_CHUNKS 5
+#define SEED 42
 
-static int arr[ARR_SIZE];
-static int temp[ARR_SIZE];
-
-void merge(int *a, int left, int mid, int right)
+void merge_arrays(int *data, int *buffer, int start, int middle, int end)
 {
-    int i = left;
-    int j = mid + 1;
-    int k = left;
+    int left_ptr = start;
+    int right_ptr = middle + 1;
+    int buffer_ptr = start;
 
-    while (i <= mid && j <= right) {
-        if (a[i] <= a[j])
-            temp[k++] = a[i++];
-        else
-            temp[k++] = a[j++];
+    while (left_ptr <= middle && right_ptr <= end) {
+        buffer[buffer_ptr++] = (data[left_ptr] <= data[right_ptr]) 
+                                ? data[left_ptr++] 
+                                : data[right_ptr++];
     }
 
-    while (i <= mid)
-        temp[k++] = a[i++];
+    while (left_ptr <= middle) {
+        buffer[buffer_ptr++] = data[left_ptr++];
+    }
 
-    while (j <= right)
-        temp[k++] = a[j++];
+    while (right_ptr <= end) {
+        buffer[buffer_ptr++] = data[right_ptr++];
+    }
 
-    for (i = left; i <= right; i++)
-        a[i] = temp[i];
-}
-
-void merge_sort_recursive(int *a, int left, int right)
-{
-    if (left < right) {
-        int mid = left + (right - left) / 2;
-        merge_sort_recursive(a, left, mid);
-        merge_sort_recursive(a, mid + 1, right);
-        merge(a, left, mid, right);
+    for (int i = start; i <= end; i++) {
+        data[i] = buffer[i];
     }
 }
 
-int main()
+void recursive_merge_sort(int *data, int *buffer, int start, int end)
 {
-    FILE *file = fopen("random_numbers.bin", "rb");
-    if (!file)
-        return 1;
+    if (start >= end) return;
+    int middle = start + (end - start) / 2;
+    recursive_merge_sort(data, buffer, start, middle);
+    recursive_merge_sort(data, buffer, middle + 1, end);
+    merge_arrays(data, buffer, start, middle, end);
+}
+
+int main(void)
+{
+    // Pre-allocate all memory
+    int *chunk_arrays[TOTAL_CHUNKS];
+    int *temp_buffer = malloc(ELEMENTS_PER_CHUNK * sizeof(int));
+    if (!temp_buffer) return 1;
+
+    // Phase 1: Generate and Sort Chunks
+    srand(SEED); 
     
-    fread(arr, sizeof(int), ARR_SIZE, file);
-    fclose(file);
+    for (int chunk_id = 0; chunk_id < TOTAL_CHUNKS; chunk_id++) {
+        chunk_arrays[chunk_id] = malloc(ELEMENTS_PER_CHUNK * sizeof(int));
+        if (!chunk_arrays[chunk_id]) return 1;
 
-    // Phase 1: Sort each 2MB chunk recursively (cache-friendly)
-    // This processes 5 chunks of 524288 elements each
-    for (int i = 0; i < ARR_SIZE; i += CHUNK_SIZE) {
-        int chunk_start = i;
-        int chunk_end = ((i + CHUNK_SIZE - 1) < (ARR_SIZE - 1)) ? (i + CHUNK_SIZE - 1) : (ARR_SIZE - 1);
-        merge_sort_recursive(arr, chunk_start, chunk_end);
-    }
-
-    // Phase 2: Merge sorted chunks
-    // Only 3 merge passes needed: 2MB->4MB, 4MB->8MB, 8MB->10MB
-    for (int size = CHUNK_SIZE; size < ARR_SIZE; size *= 2) {
-        for (int left = 0; left < ARR_SIZE; left += 2 * size) {
-            int mid = left + size - 1;
-            int right = left + 2 * size - 1;
-            
-            if (mid >= ARR_SIZE) 
-                break;
-            if (right >= ARR_SIZE) 
-                right = ARR_SIZE - 1;
-            
-            merge(arr, left, mid, right);
+        for(int i = 0; i < ELEMENTS_PER_CHUNK; i++) {
+            chunk_arrays[chunk_id][i] = rand();
         }
+
+        recursive_merge_sort(chunk_arrays[chunk_id], temp_buffer, 
+                           0, ELEMENTS_PER_CHUNK - 1);
     }
+    
+    free(temp_buffer);
+
+    // Phase 2: K-Way Merge
+    int *final_output = malloc(TOTAL_ELEMENTS * sizeof(int));
+    if (!final_output) return 1;
+    
+    int chunk_positions[TOTAL_CHUNKS] = {0};
+
+    for (int output_idx = 0; output_idx < TOTAL_ELEMENTS; output_idx++) {
+        int selected_chunk = -1;
+        int minimum_value = 0;
+
+        for (int chunk_id = 0; chunk_id < TOTAL_CHUNKS; chunk_id++) {
+            if (chunk_positions[chunk_id] < ELEMENTS_PER_CHUNK) {
+                int current_value = chunk_arrays[chunk_id][chunk_positions[chunk_id]];
+                if (selected_chunk == -1 || current_value < minimum_value) {
+                    minimum_value = current_value;
+                    selected_chunk = chunk_id;
+                }
+            }
+        }
+
+        final_output[output_idx] = minimum_value;
+        chunk_positions[selected_chunk]++;
+    }
+
+    for (int i = 0; i < TOTAL_CHUNKS; i++) free(chunk_arrays[i]);
+    free(final_output);
 
     return 0;
 }
