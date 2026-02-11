@@ -1,6 +1,6 @@
 L1_Size,Execution_Time,Hits,Misses
-16kB,0.131018,2120229,2182339
-32kB,0.131010,2120502,2182066
-64kB,0.081524,4182367,120201
-128kB,0.081007,4204044,98524
-256kB,0.077753,4298441,4127
+16kB,Error: [WinError 2] The system cannot find the file specified,0,0
+32kB,Error: [WinError 2] The system cannot find the file specified,0,0
+64kB,Error: [WinError 2] The system cannot find the file specified,0,0
+128kB,Error: [WinError 2] The system cannot find the file specified,0,0
+256kB,Error: [WinError 2] The system cannot find the file specified,0,0

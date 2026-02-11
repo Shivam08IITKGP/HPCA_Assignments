@@ -5,19 +5,18 @@ import multiprocessing
 import os
 import itertools
 
-gem5_installation = "/home/tishya/shivam/hpc/gem5"
-project_base = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+gem5_installation ="/home/tishya/shivam/hpc/gem5"
+project_base =os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
-gem5_bin = os.path.join(gem5_installation, "build/RISCV/gem5.opt")
-cache_conf = os.path.join(project_base, "configs/cache_config.py")
-test_binary = os.path.join(project_base, "benchmarks/matrix_multiply_64x64")
-sweep_output = os.path.join(project_base, "results/full_sweep_64")
-results_file = os.path.join(sweep_output, "full_sweep_results_64.csv")
+gem5_bin =os.path.join(gem5_installation, "build/RISCV/gem5.opt")
+cache_conf= os.path.join(project_base, "configs/cache_config.py")
+test_binary=os.path.join(project_base, "benchmarks/matrix_multiply_64x64")
+sweep_output=os.path.join(project_base, "results/full_sweep_64")
+results_file=os.path.join(sweep_output, "full_sweep_results_64.csv")
 
 def build_benchmark():
-    src_file = os.path.join(project_base, "benchmarks/matrix_multiply.c")
-    
-    build_cmd = [
+    src_file=os.path.join(project_base, "benchmarks/matrix_multiply.c")
+    build_cmd=[
         "/home/tishya/shivam/hpc/gem5/riscv-toolchain/riscv/bin/riscv64-unknown-linux-gnu-gcc",
         "-O2", "-static", "-DMATRIX_SIZE=64",
         src_file, "-o", test_binary
@@ -30,12 +29,12 @@ def build_benchmark():
         print(f"Failed to compile benchmark for 64x64 matrix")
         exit(1)
 
-l1_cache_sizes = ["16kB", "32kB", "64kB"]
-l2_cache_sizes = ["128kB", "256kB", "512kB"]
-l1_associativities = ["2", "4", "8"]
-l2_associativities = ["4", "8", "16"]
+l1_cache_sizes=["16kB", "32kB", "64kB"]
+l2_cache_sizes=["128kB", "256kB", "512kB"]
+l1_associativities=["2", "4", "8"]
+l2_associativities =["4", "8", "16"]
 
-all_configurations = list(itertools.product(l1_cache_sizes, l2_cache_sizes, l1_associativities, l2_associativities))
+all_configurations =list(itertools.product(l1_cache_sizes, l2_cache_sizes, l1_associativities, l2_associativities))
 
 def execute_config(params):
     l1_sz, l2_sz, l1_assoc, l2_assoc = params
