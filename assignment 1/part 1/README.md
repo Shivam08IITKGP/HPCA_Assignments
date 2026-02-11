@@ -14,9 +14,7 @@ part 1/
 │   └── cache_config.py           # gem5 cache hierarchy configuration
 ├── scripts/
 │   ├── cache_sweep.py            # Single-parameter L1 sweep (Part 2)
-│   ├── full_sweep.py             # Full sweep for 128x128 matrix
-│   ├── full_sweep_64.py          # Full sweep for 64x64 matrix
-│   ├── full_sweep_256.py         # Full sweep for 256x256 matrix
+│   ├── full_sweep.py             # Unified sweep script for all matrix sizes
 │   └── analyze.py                # Combined extraction and analysis
 ├── results/
 │   ├── full_sweep/               # 128x128 results
@@ -52,24 +50,24 @@ python3 scripts/cache_sweep.py
 **Output:** `results/l1_sweep_results.csv`
 
 ### 3. Full Multi-Parameter Sweep (Part 3)
-Run comprehensive sweeps for all three matrix sizes:
+Run comprehensive sweeps for all three matrix sizes using the unified script:
 
-**For 128x128 matrix (81 configurations):**
+**For 128x128 matrix (default):**
 ```bash
-python3 scripts/full_sweep.py
+python3 scripts/full_sweep.py --size 128
 ```
+*Note: `--size 128` is the default if no argument is provided.*
 
-**For 64x64 matrix (optional enhancement):**
+**For 64x64 matrix:**
 ```bash
-python3 scripts/full_sweep_64.py
+python3 scripts/full_sweep.py --size 64
 ```
-*Note: This script automatically compiles the benchmark with `-DMATRIX_SIZE=64`*
+*Note: This script automatically compiles the benchmark for the specified size.*
 
-**For 256x256 matrix (optional enhancement):**
+**For 256x256 matrix:**
 ```bash
-python3 scripts/full_sweep_256.py
+python3 scripts/full_sweep.py --size 256
 ```
-*Note: This script automatically compiles the benchmark with `-DMATRIX_SIZE=256`*
 
 **Parameters swept:**
 - L1 Sizes: [16kB, 32kB, 64kB]

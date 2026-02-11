@@ -65,8 +65,8 @@ PART 1: BASELINE CACHE PERFORMANCE COMPARISON
 ============================================================
                 Execution Time (s)  Simulation Ticks  Instructions Per Cycle  L1 Data Miss Rate  L2 Miss Rate
 Mergesort Type                                                                                               
-Simple                    3.992447     3992447091000                0.299274           0.019771      0.680915
-Chunked                   4.007310     4007310104000                0.300675           0.019184      0.669356
+Chunked                   3.719479     3719479232000                0.331840           0.013387      0.553889
+Simple                    4.261141     4261141217000                0.316764           0.017239      0.689102
 ============================================================
 ```
 
@@ -125,14 +125,14 @@ python3 scripts/analyze_all.py
 ## Results Summary
 
 **Best IPC configurations:**
-- **Simple**: L1=128kB/4-way, L2=1024kB/4-way → IPC=0.3067
-- **Chunked**: L1=128kB/8-way, L2=1024kB/4-way → IPC=0.3068
+- **Simple**: L1=128kB/4-way, L2=1024kB/4-way → IPC=0.3241
+- **Chunked**: L1=128kB/4-way, L2=1024kB/4-way → IPC=0.3386
 
 **Key findings:**
-- Chunked algorithm achieves 1.5% higher IPC on average
-- Chunked reduces L2 miss rate by ~1.7%
-- Performance is less sensitive to cache size for chunked variant
-- Chunked can achieve similar performance with 50% smaller L2 cache
+- Chunked algorithm achieves **~4.7% higher IPC** on average.
+- Chunked is **~12.7% faster** in execution time at baseline.
+- Chunked reduces L2 miss rate significantly by using selection-based n-way merge.
+- The use of in-memory data generation (zero I/O) provides pure performance metrics.
 
 ## Compiling Benchmarks (if needed)
 ```bash
