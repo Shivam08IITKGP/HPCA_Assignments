@@ -8,4 +8,10 @@ part 2/results/full_sweep/Chunked_*
 *.log
 m5out/
 __pycache__/
-
+debug_out/
+test_out/
+mergesort_test.c
+mergesort_test
+verification_sweep/
+verify_locality.py
+compare_early_results.py

@@ -50,27 +50,36 @@ part 2/
 
 ### Part 1: Baseline Comparison
 
-Extract and display the baseline performance comparison for default cache configuration:  
+To extract and display the baseline performance comparison for the default cache configuration:  
 **(L1D: 64KiB/8-way, L2: 512KiB/16-way)**
 
+Run the unified analysis script:
 ```bash
-python3 scripts/baseline_analysis.py
+python3 scripts/analyze_all.py
 ```
 
 **Output:**
 ```
-                Execution Time (s)  Instructions Per Cycle  L1 Data Miss Rate  L2 Miss Rate
-Mergesort Type                                                                             
-Simple                    3.992447                0.299274           0.019771      0.680915
-Chunked                   4.007310                0.300675           0.019184      0.669356
+============================================================
+PART 1: BASELINE CACHE PERFORMANCE COMPARISON
+============================================================
+                Execution Time (s)  Simulation Ticks  Instructions Per Cycle  L1 Data Miss Rate  L2 Miss Rate
+Mergesort Type                                                                                               
+Simple                    3.992447     3992447091000                0.299274           0.019771      0.680915
+Chunked                   4.007310     4007310104000                0.300675           0.019184      0.669356
+============================================================
 ```
 
 ### Part 2: Full Cache Optimization Sweep
 
-Run comprehensive parameter sweep for both mergesort variants:
+Run the multi-parameter sweep for both mergesort variants. This script is now smart: it skips simulations if `stats.txt` already exists unless the `--force` flag is used.
 
 ```bash
-python3 scripts/full_sweep.py
+# To extract results without re-running simulations:
+python3 scripts/full_sweep.py --extract-only
+
+# To force re-running all simulations:
+python3 scripts/full_sweep.py --force
 ```
 
 **Parameters swept** (162 total configurations):
@@ -82,21 +91,24 @@ python3 scripts/full_sweep.py
 
 **Output:** `results/full_sweep/full_sweep_results.csv`
 
-**Note:** Runs in parallel using all available CPU cores (48 detected). Estimated time: ~5 hours.
-
 ### Part 3: Analysis & Visualization
 
-Generate all required plots and summary statistics:
+Generate all 8 required plots and summary statistics:
 
 ```bash
-python3 scripts/plot.py
+python3 scripts/analyze_all.py
 ```
 
 **Generated plots** (saved to `results/analysis_plots/`):
 1. `plot_miss_rate_comparison.png` - L2 miss rate comparison (bar chart)
 2. `plot_time_impact.png` - L1 size impact on execution time (line chart)
 3. `plot_ipc_efficiency.png` - CPU efficiency comparison (bar chart)
-4. `plot_hitrate_l1.png` - L1 hit rate vs cache size (line chart)
+4. `plot_hitrate_l1.png` - L1 hit rate vs L1 size (line chart)
+5. `plot_l2_missrate_vs_size.png` - L2 miss rate vs L2 size (line chart)
+6. `plot_ipc_vs_l1d_size.png` - IPC vs L1D cache size (line chart)
+7. `plot_l1d_hitrate_vs_assoc.png` - L1D hit rate vs associativity (line chart)
+8. `plot_simple_vs_chunked_comparison.png` - Comprehensive 2×2 comparison grid
+
 
 **Console output:**
 - Top 3 configurations by IPC for Simple variant

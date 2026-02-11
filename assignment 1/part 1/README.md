@@ -17,7 +17,7 @@ part 1/
 │   ├── full_sweep.py             # Full sweep for 128x128 matrix
 │   ├── full_sweep_64.py          # Full sweep for 64x64 matrix
 │   ├── full_sweep_256.py         # Full sweep for 256x256 matrix
-│   └── analyze_all.py            # Combined analysis for all matrix sizes
+│   └── analyze.py                # Combined extraction and analysis
 ├── results/
 │   ├── full_sweep/               # 128x128 results
 │   ├── full_sweep_64/            # 64x64 results
@@ -80,21 +80,26 @@ python3 scripts/full_sweep_256.py
 **Note:** Each sweep runs in parallel using all available CPU cores (48 cores detected).
 
 ### 4. Analysis & Visualization (Part 4)
-Generate comparative plots and summary statistics:
+Generate comprehensive plots and summary statistics:
 ```bash
-python3 scripts/analyze_all.py
+python3 scripts/analyze.py
 ```
 
 **Generated plots** (saved to `results/analysis_all/`):
-- `plot_compare_l1_size_vs_time.png` - L1 cache size impact across matrix sizes
-- `plot_compare_l2_size_vs_time.png` - L2 cache size impact
-- `plot_compare_l1_miss_rate.png` - Associativity effects
-- `plot_heatmap_time_64x64.png` - Performance heatmap for 64x64
-- `plot_heatmap_time_128x128.png` - Performance heatmap for 128x128
-- `plot_heatmap_time_256x256.png` - Performance heatmap for 256x256
+1. `l1_size_vs_time.png` - L1 cache size impact
+2. `l2_size_vs_time.png` - L2 cache size impact
+3. `l1_hitrate_vs_l1_size.png` - L1 hit rate vs L1 size
+4. `l1_hitrate_vs_l1_assoc.png` - L1 hit rate vs L1 associativity
+5. `l2_hitrate_vs_l2_size.png` - L2 hit rate vs L2 size
+6. `l2_hitrate_vs_l2_assoc.png` - L2 hit rate vs L2 associativity
+7. `heatmap_time_128x128.png` - Performance heatmap
+8. `simticks_vs_l2_size.png` - Simulation ticks vs L2 size
+9. `hostseconds_vs_l2_size.png` - Wall-clock time vs L2 size
+10. `summary_statistics.csv` - Statistical summary of all metrics
 
 **Console output:**
 - Top 3 fastest configurations for each matrix size
+- Summary statistics (mean, median, std dev, min, max) for all metrics
 
 ## Key Configuration Parameters
 - **Clock Frequency**: 1 GHz

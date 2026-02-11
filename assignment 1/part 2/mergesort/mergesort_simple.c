@@ -1,80 +1,56 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define ARR_SIZE 2621440
+#define ARR_SIZE 2621440  // 10MB
 
 int arr[ARR_SIZE];
 int temp[ARR_SIZE];
 
-void merge(int arr[], int l, int m, int r) 
+void merge(int arr[], int left, int mid, int right)
 {
-    int i = l;
-    int j = m + 1;
-    int k = l;
+    int i = left;
+    int j = mid + 1;
+    int k = left;
 
-    while (i <= m && j <= r) 
+    while (i <= mid && j <= right)
     {
-        if (arr[i] <= arr[j]) 
-        {
-            temp[k] = arr[i];
-            i++;
-        } 
-        else 
-        {
-            temp[k] = arr[j];
-            j++;
-        }
-        k++;
+        if (arr[i] <= arr[j])
+            temp[k++] = arr[i++];
+        else
+            temp[k++] = arr[j++];
     }
 
-    while (i <= m) 
-    {
-        temp[k] = arr[i];
-        i++;
-        k++;
-    }
+    while (i <= mid)
+        temp[k++] = arr[i++];
 
-    while (j <= r) 
-    {
-        temp[k] = arr[j];
-        j++;
-        k++;
-    }
+    while (j <= right)
+        temp[k++] = arr[j++];
 
-    for (int p = l; p <= r; p++) 
-    {
+    for (int p = left; p <= right; p++)
         arr[p] = temp[p];
-    }
 }
 
-void mergeSort(int arr[], int l, int r) 
+void mergeSort(int arr[], int left, int right)
 {
-    if (l < r) 
+    if (left < right)
     {
-        int m = l + (r - l) / 2;
-        mergeSort(arr, l, m);
-        mergeSort(arr, m + 1, r);
-        merge(arr, l, m, r);
+        int mid = left + (right - left) / 2;
+        mergeSort(arr, left, mid);
+        mergeSort(arr, mid + 1, right);
+        merge(arr, left, mid, right);
     }
 }
 
-int main() {
-    FILE *file = fopen("problem2/random_numbers.bin", "rb");
-    if (!file) {
-        file = fopen("random_numbers.bin", "rb");
-        if (!file)
-        {
-            printf("Error opening file!\n");
-            return 1;
-        }
-    }
-    
-    size_t result = fread(arr, sizeof(int), ARR_SIZE, file);
+int main()
+{
+    FILE *file = fopen("random_numbers.bin", "rb");
+    if (!file)
+        return 1;
+
+    fread(arr, sizeof(int), ARR_SIZE, file);
     fclose(file);
 
-    printf("Starting Simple Merge Sort...\n");
     mergeSort(arr, 0, ARR_SIZE - 1);
-    printf("Sorting Complete!\n");
 
     return 0;
 }

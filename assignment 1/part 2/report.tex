@@ -1,193 +1,400 @@
 \documentclass[11pt, a4paper]{article}
 
-% --- Fonts (Readable & Professional) ---
+% --- OPTIMIZATION SETTINGS ---
+\usepackage{mathptmx} % Lightweight font (Times)
 \usepackage[T1]{fontenc}
-\usepackage{newpxtext}
-\usepackage{newpxmath}
-\usepackage{microtype}
+\usepackage[varqu,varl]{zi4} % Consolas-like monospaced font
 
-% --- Better monospace font for code/verbatim ---
-\usepackage{inconsolata}
+% "final" forces images to show. Use "draft" if you need to debug text only.
+\usepackage[final]{graphicx} 
 
-% --- Slightly better line spacing for reports ---
-\usepackage{setspace}
-\onehalfspacing
-\usepackage{array}
-\renewcommand{\arraystretch}{1.1}
-
-\usepackage{fvextra}
-\DefineVerbatimEnvironment{verbatim}{Verbatim}{
-  fontsize=\small,
-  breaklines=true
-}
-
-
-\usepackage{graphicx}
+% --- STANDARD PACKAGES ---
 \usepackage{amsmath}
 \usepackage{geometry}
 \usepackage{booktabs}
 \usepackage{fancyhdr}
-\usepackage[
-    colorlinks=true,
-    linkcolor=black,
-    urlcolor=blue,
-    citecolor=black
-]{hyperref}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{multirow}
+\usepackage{adjustbox}
+\usepackage{float}
+\usepackage{siunitx}
+\usepackage{hyperref}
 
+% --- CONFIGURATION ---
+\setlength{\emergencystretch}{2em}
+\geometry{left=25mm, right=25mm, top=25mm, bottom=25mm}
 
-\geometry{a4paper, margin=1in}
+\sisetup{
+  parse-numbers=false,
+  round-mode=figures,
+  round-precision=4
+}
 
-\pagestyle{fancy}
-\fancyhf{}
-\lhead{HPCA Assignment 1 - Problem 2}
-\rhead{\thepage}
+\lstset{
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  frame=single,
+  columns=fullflexible,
+  captionpos=b
+}
 
-\title{Problem 2: Gem5 MergeSort Cache Analysis}
-\author{Rahate Tanishka Shivendra (22CS30043), Shivam Choudhury (22CS10072)}
-\date{}   % ← removes date
+\title{Problem 1: Cache Hierarchy Optimization using gem5}
+\author{Rahate Tanishka Shivendra (22CS30044), Shivam Choudhury (22CS10072)}
+\date{}
 
 \begin{document}
 
 \maketitle
 
 \section{Introduction}
-This report analyzes the cache performance of two merge sort variants on a RISC-V architecture simulated in gem5. The two variants are:
-\begin{itemize}
-    \item \textbf{Simple}: A standard, recursive in-memory merge sort.
-    \item \textbf{Chunked}: An optimized version that sorts the data in 2MB chunks before merging them, designed to improve cache locality.
-\end{itemize}
-The analysis compares a baseline configuration and then explores a wide parameter sweep to find optimal cache configurations for each workload.
+This report presents a comprehensive investigation into cache hierarchy performance using the gem5 simulator. We analyzed a memory-intensive matrix multiplication benchmark across a wide range of cache configurations to understand the impact of L1/L2 cache sizes and associativities on execution time, cache hit rates, and overall system performance. 
 
-\section{Part 1: Baseline Comparison}
-The first task is to compare the performance of both variants with the default cache configuration (L1D: 64KiB/8-way, L2: 512KiB/16-way). The results are shown in Table \ref{tab:baseline}.
+To provide a thorough analysis, we extended the assignment by testing three different matrix sizes (64$\times$64, 128$\times$128, and 256$\times$256), enabling us to observe how cache performance scales with working set size. This multi-scale approach reveals critical insights into cache design trade-offs for different application characteristics.
 
-\begin{table}[h!]
+\section{Part 1: Environment Setup}
+
+\subsection{gem5 Configuration}
+The gem5 environment was configured with a RISC-V build using the TimingSimpleCPU model. The core of our simulation infrastructure is the \texttt{cache\_config.py} script, which defines a three-level cache hierarchy (L1 instruction, L1 data, and unified L2) with parameterized sizes and associativities.
+
+\subsection{Cache Configuration Script}
+The \texttt{cache\_config.py} script provides command-line arguments for flexible cache configuration:
+
+\begin{lstlisting}[language=Python, caption=Key sections of cache\_config.py]
+import m5
+from m5.objects import *
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--l1d_size", type=str, default="64kB")
+parser.add_argument("--binary", type=str, required=True)
+parser.add_argument("--l2_size", type=str, default="256kB")
+parser.add_argument("--l1_assoc", type=int, default=2)
+parser.add_argument("--l2_assoc", type=int, default=8)
+
+# Cache hierarchy with L1I, L1D, and unified L2
+system.cpu.icache = L1_ICache(args)
+system.cpu.dcache = L1_DCache(args)
+system.l2cache = L2Cache(args)
+\end{lstlisting}
+
+\subsection{Matrix Multiplication Benchmark}
+The benchmark uses a standard triple-nested loop matrix multiplication with configurable matrix size:
+
+\begin{lstlisting}[language=C, caption=Matrix size configuration in matrix\_multiply.c]
+#ifndef MATRIX_SIZE
+#define MATRIX_SIZE 128  /* Default: 128. Override with -DMATRIX_SIZE=64 */
+#endif
+
+volatile int A[MATRIX_SIZE][MATRIX_SIZE];
+volatile int B[MATRIX_SIZE][MATRIX_SIZE];
+volatile int C[MATRIX_SIZE][MATRIX_SIZE];
+\end{lstlisting}
+
+\subsection{Successful Test Run}
+A test run was performed with the default cache configuration to verify the setup:
+
+\begin{lstlisting}[language=bash]
+./build/RISCV/gem5.opt configs/cache_config.py \
+    --l1d_size=16kB --l2_size=256kB \
+    --l1_assoc=4 --l2_assoc=8 \
+    --binary=benchmarks/matrix_multiply
+\end{lstlisting}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{gem5_test_run.png}
+    \caption{Screenshot of successful gem5 test run showing simulation initialization and completion.}
+    \label{fig:test_run}
+\end{figure}
+
+\subsection{Cache Statistics Output}
+The gem5 simulator generates detailed statistics in \texttt{stats.txt}. Key metrics from a sample run confirm that the cache hierarchy is functioning correctly, with the L1 data cache achieving a 99.1\% hit rate.
+
+\section{Part 2: Single Parameter Sweep}
+\begin{table}[htbp]
 \centering
-\caption{Baseline performance comparison of mergesort variants.}
-\label{tab:baseline}
-\begin{tabular}{lrrrr}
+\caption{Summary Statistics Across Matrix Sizes}
+\label{tab:summary_stats}
+
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\renewcommand{\arraystretch}{1.1}
+
+\adjustbox{max width=\textwidth}{
+\begin{tabular}{
+  ll
+  S[table-format=1.2e-2]
+  S[table-format=1.2e-2]
+  S[table-format=1.2e-2]
+  S[table-format=1.2e-2]
+  S[table-format=3.0]
+}
+
 \toprule
-Mergesort Type & Time (s) & IPC & L1D Miss Rate & L2 Miss Rate \\
+\textbf{Matrix} & \textbf{Metric} &
+{Mean} & {Median} & {Std} & {Min} & {Max} \\
 \midrule
-Simple & 3.992447 & 0.299274 & 0.019771 & 0.680915 \\
-Chunked & 4.007310 & 0.300675 & 0.019184 & 0.669356 \\
+
+\multirow{5}{*}{64$\times$64}
+& simSec   & 1.10e-02 & 1.06e-02 & 4.22e-04 & 1.06e-02 & 1.16e-02 \\
+& hostSec  & 6.08     & 6.82     & 1.35     & 3.56     & 8.92     \\
+& L1 miss  & 2.66e-02 & 5.13e-03 & 2.61e-02 & 3.81e-03 & 7.24e-02 \\
+& L2 miss  & 4.14e-01 & 5.89e-01 & 3.21e-01 & 4.63e-02 & 7.85e-01 \\
+& Cache(kB)& 336      & 288      & 162      & 144      & 576      \\
+\midrule
+
+\multirow{5}{*}{128$\times$128}
+& simSec   & 1.14e-01 & 1.29e-01 & 2.30e-02 & 8.03e-02 & 1.31e-01 \\
+& hostSec  & 53.9     & 64.2     & 15.1     & 27.6     & 76.3     \\
+& L1 miss  & 3.44e-01 & 4.96e-01 & 2.22e-01 & 2.52e-02 & 5.07e-01 \\
+& L2 miss  & 1.56e-02 & 3.45e-03 & 2.05e-02 & 1.96e-03 & 6.94e-02 \\
+& Cache(kB)& 336      & 288      & 162      & 144      & 576      \\
+\midrule
+
+\multirow{5}{*}{256$\times$256}
+& simSec   & 1.46     & 1.07     & 0.58     & 1.02     & 2.28     \\
+& hostSec  & 521      & 523      & 109      & 294      & 734      \\
+& L1 miss  & 5.02e-01 & 5.00e-01 & 2.59e-03 & 5.00e-01 & 5.05e-01 \\
+& L2 miss  & 3.48e-01 & 4.18e-02 & 4.62e-01 & 1.43e-03 & 1.00      \\
+& Cache(kB)& 336      & 288      & 162      & 144      & 576      \\
+\bottomrule
+\end{tabular}
+}
+
+\end{table}
+
+Table~\ref{tab:summary_stats} summarizes the statistical distribution of execution time, cache miss rates, and total cache capacity across all tested matrix sizes.
+
+\subsection{Methodology}
+For the single parameter sweep, we investigated the impact of \textbf{L2 cache size} while keeping other parameters constant. We chose L2 cache size because it represents a critical trade-off point in cache hierarchy design.
+
+\textbf{Sweep Configuration:}
+\begin{itemize}
+    \item \textbf{Variable Parameter:} L2 cache size (128kB, 256kB, 512kB)
+    \item \textbf{Fixed Parameters:} L1D = 16kB (assoc=4), L1I = 16kB (assoc=4), L2 assoc = 8
+    \item \textbf{Matrix Sizes Tested:} 64$\times$64, 128$\times$128, 256$\times$256
+\end{itemize}
+
+\subsection{Results and Analysis}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{l2_size_vs_time.png}
+    \caption{Impact of L2 Cache Size on Execution Time (log scale) with L1 cache fixed at 16kB.}
+    \label{fig:l2_sweep}
+\end{figure}
+
+\paragraph{Observed Trends:}
+As shown in Figure \ref{fig:l2_sweep}, the relationship between L2 cache size and execution time exhibits distinct patterns across different matrix sizes:
+
+\begin{itemize}
+    \item \textbf{64$\times$64 Matrix:} Performance is relatively insensitive to L2 size. The working set fits comfortably within even the smallest L2 cache tested.
+    \item \textbf{128$\times$128 Matrix:} A moderate performance improvement is observed when increasing L2 from 128kB to 256kB.
+    \item \textbf{256$\times$256 Matrix:} The most dramatic performance cliff occurs between 128kB and 256kB L2 cache. Execution time drops by approximately 40\% when doubling the L2.
+\end{itemize}
+
+\paragraph{Why This Effect Occurs:}
+When the L2 cache is too small to hold the working set, \textbf{capacity misses} dominate, forcing frequent main memory accesses. Each main memory access incurs a penalty of 100+ cycles, compared to 10-20 cycles for L2 hits.
+
+\section{Part 3: Multi-Parameter Analysis}
+
+\subsection{Full Parameter Sweep Methodology}
+We conducted a comprehensive multi-parameter sweep across the following dimensions:
+\begin{itemize}
+    \item \textbf{L1D Cache Size:} 16kB, 32kB, 64kB
+    \item \textbf{L2 Cache Size:} 128kB, 256kB, 512kB
+    \item \textbf{L1 Associativity:} 2, 4, 8
+    \item \textbf{L2 Associativity:} 4, 8, 16
+    \item \textbf{Matrix Sizes:} 64$\times$64, 128$\times$128, 256$\times$256
+\end{itemize}
+
+This resulted in 108 unique cache configurations per matrix size (324 total simulations).
+
+\subsection{Impact of L1 Cache Size}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{l1_size_vs_time.png}
+    \caption{Impact of L1 Cache Size on Execution Time (log scale) with L2 fixed at 256kB.}
+    \label{fig:l1_time}
+\end{figure}
+
+The L1 cache serves as the primary mechanism for reducing effective memory access time (EMAT). As observed in Figure \ref{fig:l1_time}, the performance scaling is non-linear across matrix sizes. For the 128$\times$128 matrix, a significant performance improvement occurs between 32kB and 64kB, suggesting that 64kB is the critical threshold.
+
+\subsection{Impact of Associativity}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{l1_miss_rate_by_assoc.png}
+    \caption{L1 Miss Rate by Associativity, faceted by Matrix Size.}
+    \label{fig:l1_miss_rate}
+\end{figure}
+
+Associativity is designed to mitigate conflict misses. Figure \ref{fig:l1_miss_rate} reveals that for 128$\times$128 and 256$\times$256 matrices, miss rates remain high across all associativity levels for smaller cache sizes. This is a hallmark of \textbf{capacity misses}—when data simply doesn't fit, increasing associativity offers no relief.
+
+\subsection{Cache Efficiency Heatmap}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{heatmap_time_128x128.png}
+    \caption{Execution Time Heatmap for 128$\times$128 matrix showing the relationship between L1 and L2 cache sizes.}
+    \label{fig:heatmaps}
+\end{figure}
+
+The heatmap in Figure \ref{fig:heatmaps} reveals a critical insight: execution time is almost entirely \textbf{vertically stratified}. Changes in L1 size (Y-axis) result in nearly identical colors within each column, whereas changes in L2 size (X-axis) result in massive color shifts.
+
+\subsection{Comprehensive Multi-Parameter Analysis}
+
+\subsubsection{Simulation Ticks vs Cache Parameters}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{simticks_vs_l2_size.png}
+    \caption{Simulation ticks vs L2 cache size across all three matrix sizes.}
+    \label{fig:simticks_analysis}
+\end{figure}
+
+Figure \ref{fig:simticks_analysis} shows how simulation ticks vary with L2 cache size. The 256$\times$256 matrix exhibits a dramatic performance cliff when L2 cache drops below 256kB, with simulation ticks nearly doubling.
+
+\subsubsection{L2 Cache Hit Rate Analysis}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{l2_hitrate_vs_l2_size.png}
+    \caption{L2 hit rate vs L2 cache size across all matrix sizes.}
+    \label{fig:l2_hitrate}
+\end{figure}
+
+The L2 cache hit rate is a critical metric for understanding memory hierarchy efficiency. Figure \ref{fig:l2_hitrate} reveals that the 128$\times$128 matrix achieves near-perfect L2 hit rates ($>$95\%) with 256kB or larger L2 caches.
+
+\subsubsection{Multi-Parameter Interaction Grids}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{multi_param_grid_128x128.png} % Ensure extension matches your file
+    \caption{Multi-parameter analysis grid for 128$\times$128 matrix.}
+    \label{fig:multiparam}
+\end{figure}
+
+To visualize the complex interactions between all cache parameters and performance metrics, we generated 4$\times$4 analysis grids (Figure \ref{fig:multiparam}). These grids reveal that:
+\begin{itemize}
+    \item \textbf{L2 cache size} has the strongest correlation with all performance metrics.
+    \item \textbf{L1 associativity} shows diminishing returns beyond 4-way for most workloads.
+    \item \textbf{L2 associativity} has minimal impact when cache capacity is sufficient.
+\end{itemize}
+
+\subsection{Top Configurations}
+
+Based on our comprehensive sweep, the top 3 configurations ranked by execution time for each matrix size are:
+
+\begin{table}[htbp]
+\centering
+\caption{Top 3 Fastest Configurations per Matrix Size}
+\begin{tabular}{@{}lccccr@{}}
+\toprule
+\textbf{Matrix} & \textbf{L1D Size} & \textbf{L2 Size} & \textbf{L1 Assoc} & \textbf{L2 Assoc} & \textbf{Exec Time (s)} \\
+\midrule
+64$\times$64 & 64kB & 256kB & 2 & 8 & 0.010588 \\
+64$\times$64 & 64kB & 256kB & 2 & 16 & 0.010588 \\
+64$\times$64 & 64kB & 256kB & 4 & 4 & 0.010588 \\
+\midrule
+128$\times$128 & 64kB & 512kB & 4 & 8 & 0.080250 \\
+128$\times$128 & 64kB & 512kB & 4 & 16 & 0.080250 \\
+128$\times$128 & 64kB & 512kB & 4 & 4 & 0.080250 \\
+\midrule
+256$\times$256 & 32kB & 512kB & 8 & 16 & 1.017607 \\
+256$\times$256 & 32kB & 512kB & 8 & 8 & 1.017607 \\
+256$\times$256 & 32kB & 512kB & 4 & 16 & 1.017607 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\paragraph{Analysis:}
-Despite nearly identical execution times (Simple: 3.99s vs Chunked: 4.01s), the cache behavior reveals fundamental differences in memory access patterns. The Chunked version exhibits a \textbf{1.5\% higher IPC} (0.300675 vs 0.299274), indicating more efficient instruction execution with fewer pipeline stalls.
+\section{Part 4: Design Analysis \& Recommendations}
 
-The key insight lies in the miss rate differences:
+\subsection{(a) Performance Bottlenecks}
+
+\paragraph{Question:} Is execution time dominated by L1D misses, L2 misses, or memory stalls?
+
+\paragraph{Answer:}
+The performance bottleneck varies significantly with matrix size:
 \begin{itemize}
-    \item \textbf{L1D Miss Rate:} Chunked achieves 0.019184 vs Simple's 0.019771, a 3\% reduction
-    \item \textbf{L2 Miss Rate:} Chunked achieves 0.669356 vs Simple's 0.680915, a 1.7\% reduction
+    \item \textbf{64$\times$64 Matrix:} Not bottlenecked by cache. Less than 0.1\% of memory requests reach main memory.
+    \item \textbf{128$\times$128 Matrix:} Moderately affected by L1D misses, but L2 effectively filters them.
+    \item \textbf{256$\times$256 Matrix:} Heavily dominated by L2 misses. When L2 cache is insufficient ($<$256kB), the L2 miss rate can reach 100\%.
 \end{itemize}
 
-The chunked algorithm processes 2MB blocks independently during the initial sort phase, ensuring that each block fits comfortably within the L2 cache (512KiB). This temporal locality dramatically reduces capacity misses. The simple algorithm, by contrast, recursively subdivides the entire 10MB dataset, causing frequent cache thrashing as it jumps between distant memory regions.
+\textbf{Key Insight:} For large working sets, L2 capacity is the critical bottleneck.
 
-The equivalent execution time suggests that while the chunked algorithm reduces memory stalls (reflected in higher IPC), it incurs computational overhead from the two-phase merge process, balancing out the gains for this particular cache configuration.
+\subsection{(b) Cache Efficiency}
 
-\section{Part 2: Cache Optimization Sweep}
-A full parameter sweep was conducted to find the optimal cache configurations for both workloads. The following plots analyze the results.
+\paragraph{Question:} Which cache level has the best hit rate? Why? Is L2 size or associativity more important?
 
-\subsection{CPU Efficiency (IPC)}
-Instructions Per Cycle (IPC) is a key measure of how efficiently the CPU is utilized. Figure \ref{fig:ipc} shows that the Chunked version consistently achieves a higher IPC.
+\paragraph{Answer:}
+\textbf{L2 Size vs. Associativity:} Our data conclusively shows that \textbf{L2 size is far more important than associativity}. Doubling L2 size from 256kB to 512kB improves performance by 20-40\% for large matrices, while doubling associativity improves it by $<$2\%.
 
-\begin{figure}[h!]
+\subsection{(c) Cost-Benefit Trade-off}
+
+\paragraph{Question:} What's the smallest L1D+L2 configuration that achieves 90\% of peak performance?
+
+\paragraph{Answer:}
+\begin{table}[htbp]
+\centering
+\caption{Minimal Configurations for 90\% Peak Performance}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+\textbf{Matrix} & \textbf{L1D} & \textbf{L2} & \textbf{Total} & \textbf{Performance vs. Peak} \\
+\midrule
+64$\times$64 & 16kB & 128kB & 144kB & 99.2\% \\
+128$\times$128 & 32kB & 256kB & 288kB & 96.8\% \\
+256$\times$256 & 16kB & 512kB & 528kB & 99.5\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{(d) Design Recommendations}
+
+\begin{table}[htbp]
+\centering
+\caption{Recommended Cache Configurations by Design Goal}
+\begin{tabular}{@{}lccccl@{}}
+\toprule
+\textbf{System Type} & \textbf{L1D} & \textbf{L2} & \textbf{L1 Assoc} & \textbf{L2 Assoc} & \textbf{Justification} \\
+\midrule
+Power-Constrained & 16kB & 128kB & 2 & 4 & Minimal area/power \\
+High-Performance & 64kB & 512kB & 8 & 16 & Maximum performance \\
+Balanced & 32kB & 256kB & 4 & 8 & Best perf/cost ratio \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Part 5: Pareto Optimality Analysis}
+
+In this section, we identify the \textbf{Pareto-optimal} configurations for our cache hierarchy. A configuration is Pareto-optimal if no other configuration can improve one metric (e.g., execution time) without degrading another (e.g., cache size/cost).
+
+\begin{figure}[H]
     \centering
-    \includegraphics[width=0.8\textwidth]{plot_ipc_efficiency.png}
-    \caption{CPU Efficiency (IPC): Chunked vs Simple. The chunked algorithm's better data locality leads to fewer stalls and higher IPC.}
-    \label{fig:ipc}
+    \includegraphics[width=0.95\textwidth]{pareto_frontier.png}
+    \caption{Design Space Exploration showing all 108 configurations per matrix size (shadowed points) and the resulting Pareto Front (solid lines).}
+    \label{fig:pareto}
 \end{figure}
 
-\subsection{Cache Miss Rates}
-The improved locality of the chunked algorithm directly translates to lower miss rates, particularly in the L2 cache, as shown in Figure \ref{fig:l2_miss}.
-
-\begin{figure}[h!]
-    \centering
-    \includegraphics[width=0.8\textwidth]{plot_miss_rate_comparison.png}
-    \caption{L2 Miss Rate: Chunked vs Simple. The chunked version significantly reduces L2 misses across all L2 cache sizes.}
-    \label{fig:l2_miss}
-\end{figure}
-
-\paragraph{Analysis:}
-Figure \ref{fig:l2_miss} reveals a consistent 1.5-2\% reduction in L2 miss rate for the chunked algorithm across all L2 configurations. This improvement stems from the algorithm's \textbf{cache-oblivious design}: by processing fixed 2MB chunks, the algorithm naturally adapts to the cache hierarchy without explicit tuning.
-
-The simple mergesort's recursive nature creates a unfavorable access pattern. During the divide phase, the algorithm creates stack frames that reference widely scattered memory addresses. When these merge back together, the cache must hold data from multiple tree levels simultaneously, exceeding capacity and causing evictions of still-needed data.
-
-The chunked approach, conversely, exhibits \textbf{phase behavior}:
-\begin{enumerate}
-    \item \textbf{Sort Phase:} Each 2MB chunk is sorted independently with excellent spatial locality
-    \item \textbf{Merge Phase:} Chunks are merged in streaming fashion from 1MB buffers, maintaining sequential access patterns
-\end{enumerate}
-
-This results in predictable, streaming memory access that hardware prefetchers can exploit effectively, further reducing the effective miss penalty.
-
-\subsection{L1 Cache Hit Rate Analysis}
-Figure \ref{fig:l1_hit} shows the L1 hit rate as L1 size increases.
-
-\begin{figure}[h!]
-    \centering
-    \includegraphics[width=0.8\textwidth]{plot_hitrate_l1.png}
-    \caption{L1 Hit Rate vs L1 Size. Both algorithms benefit from larger L1 caches, but the chunked version maintains consistently higher hit rates.}
-    \label{fig:l1_hit}
-\end{figure}
-
-\subsection{Execution Time Impact}
-Figure \ref{fig:time} demonstrates how L1 cache size affects overall execution time.
-
-\begin{figure}[h!]
-    \centering
-    \includegraphics[width=0.8\textwidth]{plot_time_impact.png}
-    \caption{Impact of L1 Size on Execution Time (L2 fixed at 512kB). Execution time decreases as L1 size increases, with both algorithms converging at larger cache sizes.}
-    \label{fig:time}
-\end{figure}
-
-\subsection{Top Configurations and Final Analysis}
-The sweep reveals the best configurations for each workload.
-
-\paragraph{Top 3 Configurations by IPC (Chunked):}
-\begin{verbatim}
-L1_Size  L1_Assoc L2_Size  L2_Assoc       IPC
-  128kB        16  512kB        16  0.300675
-  128kB        16  256kB        16  0.300675
-  128kB        16  1024kB       16  0.300675
-\end{verbatim}
-
-\paragraph{Analysis:}
-The full parameter sweep reveals an important architectural insight: \textbf{algorithmic optimization can reduce hardware dependencies}.
-
-\textbf{For the Simple Mergesort:}
+\subsection{Pareto Front Characteristics}
+As shown in Figure \ref{fig:pareto}, the Pareto front shifts upward and to the right as matrix size increases.
 \begin{itemize}
-    \item Best configuration: L1 128kB (16-way), L2 1024kB (16-way)
-    \item Performance is highly sensitive to cache size
-    \item Requires expensive, high-associativity caches to minimize conflict misses
-\end{itemize}
-
-\textbf{For the Chunked Mergesort:}
-\begin{itemize}
-    \item Best configuration: L1 128kB (16-way), L2 512kB (16-way)
-    \item IPC remains consistently high (0.300+) across most configurations
-    \item Performance is relatively insensitive to L2 size beyond 512kB
-\end{itemize}
-
-\textbf{Key Takeaway:}
-The chunked algorithm achieves comparable performance with \textbf{half the L2 cache size} (512kB vs 1024kB). This has significant implications for chip design:
-\begin{enumerate}
-    \item \textbf{Silicon Area:} Smaller caches reduce die area and cost
-    \item \textbf{Power Consumption:} Smaller caches consume less static and dynamic power
-    \item \textbf{Scalability:} Cache-aware algorithms scale better to larger datasets
-\end{enumerate}
-
-However, the chunked algorithm has its own costs:
-\begin{itemize}
-    \item More complex implementation and debugging
-    \item Additional merge phase overhead (visible in similar execution times despite better cache behavior)
-    \item Memory allocation complexity for temporary buffers
+    \item \textbf{High-Efficiency Zone:} There is a distinct "knee" where doubling cache size yields massive performance gains.
+    \item \textbf{Diminishing Returns Zone:} Beyond 256kB for small matrices and 512kB for large ones, increasing cache size (cost) yields negligible performance improvements.
 \end{itemize}
 
 \section{Conclusion}
-This study demonstrates the co-design principle in computer architecture: \textbf{hardware and software must be optimized together}. While cache-oblivious algorithms like chunked mergesort require more sophisticated implementation, they reduce hardware requirements and improve energy efficiency. For memory-intensive workloads on resource-constrained systems, algorithmic optimization can provide better cost-performance than simply increasing cache size.
+
+This comprehensive cache hierarchy study reveals several critical insights for processor design:
+
+\begin{enumerate}
+    \item \textbf{L2 capacity dominates performance} for memory-intensive workloads with large working sets.
+    \item \textbf{Working set size is the primary determinant} of optimal cache configuration.
+    \item \textbf{Associativity shows diminishing returns} beyond 4-way for L1 and 8-way for L2.
+    \item \textbf{The "balanced" configuration} (32kB L1D, 256kB L2, moderate associativity) represents the sweet spot for general-purpose computing.
+\end{enumerate}
 
 \end{document}

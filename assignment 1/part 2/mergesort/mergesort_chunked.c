@@ -1,104 +1,77 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define ARR_SIZE 2621440
-#define CHUNK_SIZE 524288  // 2MB chunks (since int is 4 bytes)
+#define ARR_SIZE      2621440  // 10MB total
+#define CHUNK_SIZE    524288   // 2MB chunks (ARR_SIZE / 5)
 
-int arr[ARR_SIZE];
-int temp[ARR_SIZE];
+static int arr[ARR_SIZE];
+static int temp[ARR_SIZE];
 
-void merge(int arr[], int l, int m, int r) 
+void merge(int *a, int left, int mid, int right)
 {
-    int i = l;
-    int j = m + 1;
-    int k = l;
+    int i = left;
+    int j = mid + 1;
+    int k = left;
 
-    while (i <= m && j <= r) 
-    {
-        if (arr[i] <= arr[j]) 
-        {
-            temp[k] = arr[i];
-            i++;
-        } 
-        else 
-        {
-            temp[k] = arr[j];
-            j++;
-        }
-        k++;
+    while (i <= mid && j <= right) {
+        if (a[i] <= a[j])
+            temp[k++] = a[i++];
+        else
+            temp[k++] = a[j++];
     }
 
-    while (i <= m) 
-    {
-        temp[k] = arr[i];
-        i++;
-        k++;
-    }
+    while (i <= mid)
+        temp[k++] = a[i++];
 
-    while (j <= r) 
-    {
-        temp[k] = arr[j];
-        j++;
-        k++;
-    }
+    while (j <= right)
+        temp[k++] = a[j++];
 
-    for (int p = l; p <= r; p++) 
-    {
-        arr[p] = temp[p];
+    for (i = left; i <= right; i++)
+        a[i] = temp[i];
+}
+
+void merge_sort_recursive(int *a, int left, int right)
+{
+    if (left < right) {
+        int mid = left + (right - left) / 2;
+        merge_sort_recursive(a, left, mid);
+        merge_sort_recursive(a, mid + 1, right);
+        merge(a, left, mid, right);
     }
 }
 
-void mergeSort(int arr[], int l, int r) 
+int main()
 {
-    if (l < r) 
-    {
-        int m = l + (r - l) / 2;
-        mergeSort(arr, l, m);
-        mergeSort(arr, m + 1, r);
-        merge(arr, l, m, r);
-    }
-}
-
-int main() 
-{
-    FILE *file = fopen("problem2/random_numbers.bin", "rb");
-    if (!file) 
-    {
-        file = fopen("random_numbers.bin", "rb");
-        if (!file) 
-        {
-            printf("Error opening file!\n");
-            return 1;
-        }
-    }
-
-    size_t result = fread(arr, sizeof(int), ARR_SIZE, file);
+    FILE *file = fopen("random_numbers.bin", "rb");
+    if (!file)
+        return 1;
+    
+    fread(arr, sizeof(int), ARR_SIZE, file);
     fclose(file);
 
-    printf("Starting Chunked Merge Sort...\n");
-
-    // Phase 1: Sort individual chunks (Cache Friendly)
-    for (int i = 0; i < ARR_SIZE; i += CHUNK_SIZE) 
-    {
-        int right = (i + CHUNK_SIZE - 1 < ARR_SIZE - 1) ? (i + CHUNK_SIZE - 1) : (ARR_SIZE - 1);
-        mergeSort(arr, i, right);
+    // Phase 1: Sort each 2MB chunk recursively (cache-friendly)
+    // This processes 5 chunks of 524288 elements each
+    for (int i = 0; i < ARR_SIZE; i += CHUNK_SIZE) {
+        int chunk_start = i;
+        int chunk_end = ((i + CHUNK_SIZE - 1) < (ARR_SIZE - 1)) ? (i + CHUNK_SIZE - 1) : (ARR_SIZE - 1);
+        merge_sort_recursive(arr, chunk_start, chunk_end);
     }
 
-    // Phase 2: Merge the sorted chunks
-    for (int size = CHUNK_SIZE; size < ARR_SIZE; size = 2 * size) 
-    {
-        for (int left = 0; left < ARR_SIZE; left += 2 * size) 
-        {
+    // Phase 2: Merge sorted chunks
+    // Only 3 merge passes needed: 2MB->4MB, 4MB->8MB, 8MB->10MB
+    for (int size = CHUNK_SIZE; size < ARR_SIZE; size *= 2) {
+        for (int left = 0; left < ARR_SIZE; left += 2 * size) {
             int mid = left + size - 1;
-            int right = (left + 2 * size - 1 < ARR_SIZE - 1) ? (left + 2 * size - 1) : (ARR_SIZE - 1);
-
-            if (mid < right) 
-            {
-                merge(arr, left, mid, right);
-            }
+            int right = left + 2 * size - 1;
+            
+            if (mid >= ARR_SIZE) 
+                break;
+            if (right >= ARR_SIZE) 
+                right = ARR_SIZE - 1;
+            
+            merge(arr, left, mid, right);
         }
     }
 
-    printf("Sorting Complete!\n");
     return 0;
 }
