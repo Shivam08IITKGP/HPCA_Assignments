@@ -92,6 +92,13 @@ Simple  & 4.2611 & 0.3168 & 0.0172 & 0.6891 \\
 
 \paragraph{Key Insight:} The Chunked variant is approximately \textbf{12.71\% faster} and achieves a \textbf{4.76\% higher IPC}. More importantly, it reduces the L2 miss rate significantly (from 68.91\% to 55.39\%), demonstrating much better utilization of the unified cache.
 
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{results/analysis_plots/plot_miss_rate_comparison.png}
+    \caption{L2 Miss Rate Comparison between Simple and Chunked variants at baseline configuration.}
+    \label{fig:miss_comp}
+\end{figure}
+
 \subsection{Cache Scaling Impact}
 
 \begin{figure}[H]
@@ -105,9 +112,41 @@ As shown in Figure \ref{fig:time_l1}, execution time scales non-linearly with L1
 
 \begin{figure}[H]
     \centering
+    \includegraphics[width=0.85\textwidth]{results/analysis_plots/plot_ipc_vs_l1d_size.png}
+    \caption{IPC vs. L1D Cache Size. Performance improves with larger L1D caches but shows diminishing returns beyond 64kB.}
+    \label{fig:ipc_l1d}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
     \includegraphics[width=0.85\textwidth]{results/analysis_plots/plot_ipc_efficiency.png}
     \caption{CPU Efficiency (IPC) Comparison. The Chunked variant consistently achieves higher instructions per cycle.}
     \label{fig:ipc_comp}
+\end{figure}
+
+\subsection{Cache Hit Rate Analysis}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{results/analysis_plots/plot_hitrate_l1.png}
+    \caption{L1 Cache Hit Rate vs. L1 Size. Both variants show improved hit rates with larger L1 caches.}
+    \label{fig:l1_hitrate}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{results/analysis_plots/plot_l1d_hitrate_vs_assoc.png}
+    \caption{L1D Hit Rate vs. Associativity. Higher associativity reduces conflict misses, improving hit rates.}
+    \label{fig:l1d_assoc}
+\end{figure}
+
+\subsection{L2 Cache Behavior Analysis}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{results/analysis_plots/plot_l2_missrate_vs_size.png}
+    \caption{L2 Miss Rate vs. L2 Cache Size. Larger L2 caches significantly reduce miss rates, especially for the Simple variant.}
+    \label{fig:l2_miss}
 \end{figure}
 
 \subsection{Cache Sensitivity Analysis}
