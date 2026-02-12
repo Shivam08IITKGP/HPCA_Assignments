@@ -1,0 +1,13 @@
+Global frequency set at 1000000000000 ticks per second
+gem5 Simulator System.  https://www.gem5.org
+gem5 is copyrighted software; use the --copyright option for details.
+
+gem5 version 25.1.0.0
+gem5 compiled Jan 31 2026 10:16:22
+gem5 started Feb 11 2026 18:33:52
+gem5 executing on sealgpu, pid 3729011
+command line: /home/tishya/shivam/hpc/gem5/build/RISCV/gem5.opt -d '/home/tishya/shivam/hpc/assignment 1/part 2/results/final_static_submission/Simple_L1_128kB_L2_1024kB_A1_16_A2_4' '/home/tishya/shivam/hpc/assignment 1/part 2/configs/cache_config.py' --l1d_size=128kB --l2_size=1024kB --l1_assoc=16 --l2_assoc=4 '--binary=/home/tishya/shivam/hpc/assignment 1/part 2/mergesort/mergesort_s_static'
+
+info: Standard input is not a terminal, disabling listeners.
+Starting simulation with L1D size: 128kB
+Exiting @ tick 3676012494000 because exiting with last active thread context

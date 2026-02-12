@@ -8,26 +8,25 @@ This directory contains the gem5 simulation scripts and results for Problem 2, w
 ```
 part 2/
 ├── configs/
-│   └── cache_config.py           # gem5 cache hierarchy configuration
+│   └── cache_config.py           # Unified gem5 system configuration
 ├── mergesort/
 │   ├── mergesort_simple.c        # Standard recursive mergesort
-│   ├── mergesort_s               # Simple variant binary
+│   ├── mergesort_s               # Simple variant binary (static)
 │   ├── mergesort_chunked.c       # Cache-optimized chunked mergesort
-│   ├── mergesort_c               # Chunked variant binary
-│   ├── simple-riscv_mergesort_simple.py   # gem5 config for simple (provided)
-│   ├── simple-riscv_mergesort_chunked.py  # gem5 config for chunked (provided)
-│   └── random_numbers.bin        # 10 MB input data 
+│   ├── mergesort_c               # Chunked variant binary (static)
+│   ├── simple-riscv_mergesort_simple.py   # gem5 baseline for simple
+│   ├── simple-riscv_mergesort_chunked.py  # gem5 baseline for chunked
+│   └── (random_numbers.bin is generated at runtime)
 ├── scripts/
-│   ├── full_sweep.py             # Full multi-parameter sweep for both variants
-│   ├── full_sweep_static.py      # Full sweep using static binaries
-│   ├── verify_locality.py        # Verification sweep (subset of configs)
-│   ├── analyze_all.py            # Generate all analysis plots & statistics
-│   └── compare_early_results.py  # Compare results across runs
+│   ├── run_sweep.py              # Run all 162 simulations
+│   ├── extract_results.py        # Extract metrics from stats.txt to CSV
+│   └── analyze.py                # Generate analysis plots & statistics
 ├── results/
-│   ├── full_sweep/               # Full sweep results (162 configs)
-│   │   └── full_sweep_results.csv
-│   └── analysis_plots/           # Generated plots (8 plots)
-└── report.tex                     # LaTeX report
+│   ├── stats/                    # Raw gem5 statistics & configs (162 configs)
+│   ├── plots/                    # Generated analysis plots
+│   └── results.csv               # Extracted metrics
+├── report.tex                    # Final LaTeX report
+└── README.md                     # This file
 ```
 
 ## Prerequisites
@@ -59,7 +58,7 @@ To extract and display the baseline performance comparison for the default cache
 
 Run the unified analysis script:
 ```bash
-python3 scripts/analyze_all.py
+python3 scripts/analyze.py
 ```
 
 **Output:**
@@ -67,21 +66,23 @@ python3 scripts/analyze_all.py
 ============================================================
 Algorithm          | Time (s) | Cycles (Ticks) | IPC    | L1 Miss % | L2 Miss %
 -------------------|----------|----------------|--------|-----------|----------
-Simple MergeSort   | 3.7667   | 3.76e12        | 0.3166 | 1.94%     | 68.05%
-Chunked MergeSort  | 3.2257   | 3.22e12        | 0.3339 | 1.51%     | 53.76%
+Simple MergeSort   | 3.7673   | 3.77e12        | 0.3165 | 1.94%     | 68.08%
+Chunked MergeSort  | 3.2451   | 3.25e12        | 0.3319 | 1.51%     | 53.67%
 ============================================================
 ```
 
 ### Part 2: Full Cache Optimization Sweep
 
-Run the multi-parameter sweep for both mergesort variants. This script is now smart: it skips simulations if `stats.txt` already exists unless the `--force` flag is used.
+To re-run all 162 configurations (Warning: This takes ~3-4 hours on a 48-core machine):
 
 ```bash
-# To extract results without re-running simulations:
-python3 scripts/full_sweep.py --extract-only
+python3 scripts/run_sweep.py
+```
 
-# To force re-running all simulations:
-python3 scripts/full_sweep.py --force
+To extract results from existing `results/stats/` directories without re-running:
+
+```bash
+python3 scripts/extract_results.py
 ```
 
 **Parameters swept** (162 total configurations):
@@ -116,14 +117,14 @@ python3 scripts/analyze_all.py
 ```
 
 **Generated plots** (saved to `results/analysis_plots/`):
-1. `plot_miss_rate_comparison.png` - L2 miss rate comparison (bar chart)
-2. `plot_time_impact.png` - L1 size impact on execution time (line chart)
-3. `plot_ipc_efficiency.png` - CPU efficiency comparison (bar chart)
-4. `plot_hitrate_l1.png` - L1 hit rate vs L1 size (line chart)
-5. `plot_l2_missrate_vs_size.png` - L2 miss rate vs L2 size (line chart)
-6. `plot_ipc_vs_l1d_size.png` - IPC vs L1D cache size (line chart)
-7. `plot_l1d_hitrate_vs_assoc.png` - L1D hit rate vs associativity (line chart)
-8. `plot_simple_vs_chunked_comparison.png` - Comprehensive 2×2 comparison grid
+1. `results/plots/plot_miss_rate_comparison.png` - L2 miss rate comparison
+2. `results/plots/plot_time_impact.png` - L1 size impact on execution time
+3. `results/plots/plot_ipc_efficiency.png` - CPU efficiency comparison
+4. `results/plots/plot_hitrate_l1.png` - L1 hit rate vs L1 size
+5. `results/plots/plot_l2_missrate_vs_size.png` - L2 miss rate vs L2 size
+6. `results/plots/plot_ipc_vs_l1d_size.png` - IPC vs L1D cache size
+7. `results/plots/plot_l1d_hitrate_vs_assoc.png` - L1D hit rate vs associativity
+8. `results/plots/plot_simple_vs_chunked_comparison.png` - Comprehensive 2×2 comparison grid
 
 
 **Console output:**
@@ -141,12 +142,12 @@ python3 scripts/analyze_all.py
 ## Results Summary
 
 **Best IPC configurations:**
-- **Simple**: L1=128kB/4-way, L2=1024kB/4-way → IPC=0.3241
-- **Chunked**: L1=128kB/4-way, L2=1024kB/4-way → IPC=0.3386
+- **Simple**: L1=128kB/4-way, L2=1024kB/4-way → IPC=0.3248
+- **Chunked**: L1=128kB/1024kB/16-way → IPC=0.3403
 
 **Key findings:**
-- Chunked algorithm achieves **~4.7% higher IPC** on average.
-- Chunked is **~12.7% faster** in execution time at baseline.
+- Chunked algorithm achieves **~4.8% higher IPC** on average at baseline.
+- Chunked is **~13.9% faster** in execution time at baseline.
 - Chunked reduces L2 miss rate significantly by using selection-based n-way merge.
 - The use of in-memory data generation (zero I/O) provides pure performance metrics.
 
