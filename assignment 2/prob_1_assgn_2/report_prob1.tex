@@ -1,0 +1,146 @@
+\documentclass[10pt,a4paper]{article}
+\usepackage[margin=1.4cm, top=1.2cm, bottom=1.2cm]{geometry}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{colortbl}
+\usepackage{caption}
+\usepackage[skip=3pt]{parskip}
+\usepackage{titlesec}
+\usepackage{microtype}
+\usepackage{amsmath}
+
+\definecolor{headerblue}{RGB}{30,90,160}
+\definecolor{rowgray}{RGB}{240,240,240}
+
+\titleformat{\section}{\normalfont\large\bfseries\color{headerblue}}{}{0em}{}
+\titlespacing{\section}{0pt}{4pt}{2pt}
+
+\captionsetup{font=small, labelfont=bf, skip=4pt}
+
+\begin{document}
+
+\begin{center}
+{\Large \textbf{Assignment 2 --- Problem 1: Loop Re-ordering (Cache Effects)}}\\[3pt]
+{\normalsize CS60003: High Performance Computer Architecture \quad|\quad IIT Kharagpur \quad|\quad Spring 2025--26}
+\end{center}
+
+\vspace{2pt}
+\hrule
+\vspace{4pt}
+
+\section{Experimental Setup}
+
+An $N \times N$ matrix of \texttt{double}-precision floats (declared globally) was filled with
+random values. Two traversal orders were implemented: \textbf{row-major} (inner loop over columns,
+cache-friendly in C) and \textbf{column-major} (inner loop over rows, strided access). Each was
+compiled with \texttt{-O0} (no optimisation) and \texttt{-O3 -march=native -fopt-info-vec}
+(aggressive optimisation + vectorisation). All experiments were pinned to \textbf{CPU core 2}
+(P-core) using \texttt{taskset} to eliminate scheduling noise. Cache statistics were collected
+using \texttt{perf stat} on an Intel hybrid CPU; only \texttt{cpu\_core} counters are reported
+as \texttt{cpu\_atom} counters were \texttt{<not counted>} on P-core~2.
+
+\vspace{4pt}
+\section{Results}
+
+\begin{table}[h!]
+\centering
+\small
+\setlength{\tabcolsep}{6pt}
+\renewcommand{\arraystretch}{1.15}
+
+\caption{Run time, cache accesses, cache misses, and miss rate for all 16 configurations (pinned to P-core 2).}
+
+\begin{tabular}{c l l r r r}
+
+\toprule
+\rowcolor{headerblue}
+\color{white}\textbf{N} &
+\color{white}\textbf{Access Type} &
+\color{white}\textbf{Opt. Flag} &
+\color{white}\textbf{Time (s)} &
+\color{white}\textbf{Cache References} &
+\color{white}\textbf{Cache Misses (Miss \%)} \\
+\midrule
+
+1024 & Row-major    & \texttt{-O0} & 0.002077 & 316,419   & 186,612 (58.98\%) \\
+     & Row-major    & \texttt{-O3} & 0.000624 & 315,324   & 221,117 (70.12\%) \\
+\rowcolor{rowgray}
+     & Column-major & \texttt{-O0} & 0.003069 & 1,233,402 & 233,219 (18.91\%) \\
+\rowcolor{rowgray}
+     & Column-major & \texttt{-O3} & 0.003381 & 1,235,328 & 280,484 (22.71\%) \\
+
+\midrule
+
+2048 & Row-major    & \texttt{-O0} & 0.008004 & 1,200,533  & 883,349   (73.58\%) \\
+     & Row-major    & \texttt{-O3} & 0.002618 & 1,183,563  & 1,049,764 (88.70\%) \\
+\rowcolor{rowgray}
+     & Column-major & \texttt{-O0} & 0.021900 & 4,862,554  & 1,744,482 (35.88\%) \\
+\rowcolor{rowgray}
+     & Column-major & \texttt{-O3} & 0.020642 & 4,882,134  & 1,587,729 (32.52\%) \\
+
+\midrule
+
+4096 & Row-major    & \texttt{-O0} & 0.031492 & 4,678,029  & 3,423,735  (73.19\%) \\
+     & Row-major    & \texttt{-O3} & 0.009083 & 4,670,829  & 4,135,685  (88.54\%) \\
+\rowcolor{rowgray}
+     & Column-major & \texttt{-O0} & 0.164405 & 19,640,191 & 15,367,724 (78.25\%) \\
+\rowcolor{rowgray}
+     & Column-major & \texttt{-O3} & 0.164094 & 19,606,503 & 15,088,652 (76.96\%) \\
+
+\midrule
+
+8192 & Row-major    & \texttt{-O0} & 0.126813 & 18,293,841 & 13,400,024 (73.25\%) \\
+     & Row-major    & \texttt{-O3} & 0.036263 & 18,141,914 & 16,484,855 (90.87\%) \\
+\rowcolor{rowgray}
+     & Column-major & \texttt{-O0} & 0.770434 & 88,231,398 & 70,113,874 (79.47\%) \\
+\rowcolor{rowgray}
+     & Column-major & \texttt{-O3} & 0.748653 & 86,655,856 & 69,297,092 (79.97\%) \\
+
+\bottomrule
+\end{tabular}
+
+\end{table}
+
+\vspace{1pt}
+
+\section{Observations}
+
+\textbf{1. Row-major is consistently faster than column-major.}
+At $N=8192$, row-major (\texttt{-O0}: 0.127\,s, \texttt{-O3}: 0.036\,s) is $6.07\times$ and
+$20.65\times$ faster than column-major (0.770\,s and 0.749\,s) respectively. C stores 2-D arrays
+in row-major order, so consecutive row elements are contiguous in memory. Row-major traversal
+exploits this spatial locality, loading a full 64-byte cache line per step. Column-major traversal
+strides by $N \times 8$ bytes between accesses, causing a cache miss on nearly every element.
+
+\textbf{2. Speedup gap widens with increasing N.}
+At $N=1024$ row-major is $\sim1.48\times$ faster (\texttt{-O0}), rising to $\sim6.07\times$ at
+$N=8192$. As $N$ grows the matrix no longer fits in L2/L3 cache. Row-major still benefits from
+hardware prefetching on sequential addresses, while column-major suffers increasingly severe
+cache-line evictions between consecutive accesses in the inner loop.
+
+\textbf{3. \texttt{-O3} benefits row-major far more than column-major.}
+The compiler auto-vectorises the row-major inner loop (confirmed by \texttt{loop vectorized using
+32 byte vectors} in compiler output), issuing 256-bit AVX2 SIMD instructions that process 4
+\texttt{double} values per cycle. Column-major access cannot be vectorised effectively due to its
+non-contiguous memory pattern, so \texttt{-O3} yields minimal speedup for column-major
+(e.g., $0.164\,\text{s} \to 0.164\,\text{s}$ at $N=4096$, and only $0.770\,\text{s} \to
+0.749\,\text{s}$ at $N=8192$).
+
+\textbf{4. Row-major generates far fewer cache references than column-major.}
+At $N=4096$ with \texttt{-O0}, row-major generates only 4.7M references vs.\ column-major's
+19.6M --- a $4\times$ difference. Row-major's sequential pattern allows the hardware prefetcher
+to silently satisfy many accesses before they stall, so they never appear as cache reference
+events. Column-major defeats the prefetcher entirely, generating far more visible cache traffic
+and more total misses in absolute terms, directly explaining its slower execution time.
+
+\textbf{5. Miss rate anomaly at small N and its explanation.}
+At $N=1024$, row-major shows a higher miss \emph{rate} (58.98\%) than column-major (18.91\%).
+This is not a contradiction: row-major's reference count is $4\times$ smaller because the
+prefetcher hides most accesses from the counter. The \emph{absolute} miss count is still lower
+for row-major (186K vs.\ 233K), and execution time confirms row-major is faster (0.002\,s
+vs.\ 0.003\,s). At $N \geq 4096$ both patterns show high miss rates ($>73\%$) as the working
+set exceeds L3 cache capacity, but column-major consistently incurs more total misses and
+$5\text{--}20\times$ slower runtime.
+
+\end{document}

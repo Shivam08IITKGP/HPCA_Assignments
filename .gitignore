@@ -1,2 +1,9 @@
 gem5/
 assignment_cache_optimization/
+# executables
+*_O0
+*_O3
+cmajor_*
+rmajor_*
+blocking_*
+naive_*
