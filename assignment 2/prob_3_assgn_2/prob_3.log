@@ -1,0 +1,97 @@
+=================================================================
+Problem 3: CACTI — Cache Access Time vs Size (Fig 2.8)
+=================================================================
+
+--- 16 KB, 1-way ---
+    Config : ./prob3_configs/cache_16KB_1way.cfg
+    Access time : 0.77584 ns
+
+--- 32 KB, 1-way ---
+    Config : ./prob3_configs/cache_32KB_1way.cfg
+    Access time : 0.93898 ns
+
+--- 64 KB, 1-way ---
+    Config : ./prob3_configs/cache_64KB_1way.cfg
+    Access time : 1.29467 ns
+
+--- 128 KB, 1-way ---
+    Config : ./prob3_configs/cache_128KB_1way.cfg
+    Access time : 1.46829 ns
+
+--- 256 KB, 1-way ---
+    Config : ./prob3_configs/cache_256KB_1way.cfg
+    Access time : 1.95313 ns
+
+--- 16 KB, 2-way ---
+    Config : ./prob3_configs/cache_16KB_2way.cfg
+    Access time : 0.96887 ns
+
+--- 32 KB, 2-way ---
+    Config : ./prob3_configs/cache_32KB_2way.cfg
+    Access time : 1.01040 ns
+
+--- 64 KB, 2-way ---
+    Config : ./prob3_configs/cache_64KB_2way.cfg
+    Access time : 1.12559 ns
+
+--- 128 KB, 2-way ---
+    Config : ./prob3_configs/cache_128KB_2way.cfg
+    Access time : 1.47098 ns
+
+--- 256 KB, 2-way ---
+    Config : ./prob3_configs/cache_256KB_2way.cfg
+    Access time : 1.95586 ns
+
+--- 16 KB, 4-way ---
+    Config : ./prob3_configs/cache_16KB_4way.cfg
+    Access time : 1.35364 ns
+
+--- 32 KB, 4-way ---
+    Config : ./prob3_configs/cache_32KB_4way.cfg
+    Access time : 1.39764 ns
+
+--- 64 KB, 4-way ---
+    Config : ./prob3_configs/cache_64KB_4way.cfg
+    Access time : 1.51102 ns
+
+--- 128 KB, 4-way ---
+    Config : ./prob3_configs/cache_128KB_4way.cfg
+    Access time : 1.59863 ns
+
+--- 256 KB, 4-way ---
+    Config : ./prob3_configs/cache_256KB_4way.cfg
+    Access time : 1.96104 ns
+
+--- 16 KB, 8-way ---
+    Config : ./prob3_configs/cache_16KB_8way.cfg
+    Access time : 2.18023 ns
+
+--- 32 KB, 8-way ---
+    Config : ./prob3_configs/cache_32KB_8way.cfg
+    Access time : 2.29369 ns
+
+--- 64 KB, 8-way ---
+    Config : ./prob3_configs/cache_64KB_8way.cfg
+    Access time : 2.42581 ns
+
+--- 128 KB, 8-way ---
+    Config : ./prob3_configs/cache_128KB_8way.cfg
+    Access time : 2.65835 ns
+
+--- 256 KB, 8-way ---
+    Config : ./prob3_configs/cache_256KB_8way.cfg
+    Access time : 2.77869 ns
+
+=================================================================
+SUMMARY TABLE — Access Time (ns)
+=================================================================
+Assoc        16 KB     32 KB     64 KB    128 KB    256 KB
+----------------------------------------------------------
+1-way       0.7758    0.9390    1.2947    1.4683    1.9531
+2-way       0.9689    1.0104    1.1256    1.4710    1.9559
+4-way       1.3536    1.3976    1.5110    1.5986    1.9610
+8-way       2.1802    2.2937    2.4258    2.6583    2.7787
+=================================================================
+
+Plot saved : ./prob_3_fig28.png
+Done.

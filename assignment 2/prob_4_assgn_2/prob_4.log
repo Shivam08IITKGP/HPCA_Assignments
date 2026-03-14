@@ -1,0 +1,97 @@
+=================================================================
+Problem 4: CACTI — Energy per Read vs Cache Size (Fig 2.9)
+=================================================================
+
+--- 16 KB, 1-way ---
+    Config : ./prob4_configs/cache_16KB_1way.cfg
+    Read energy : 0.106922 nJ
+
+--- 32 KB, 1-way ---
+    Config : ./prob4_configs/cache_32KB_1way.cfg
+    Read energy : 0.122887 nJ
+
+--- 64 KB, 1-way ---
+    Config : ./prob4_configs/cache_64KB_1way.cfg
+    Read energy : 0.153788 nJ
+
+--- 128 KB, 1-way ---
+    Config : ./prob4_configs/cache_128KB_1way.cfg
+    Read energy : 0.295412 nJ
+
+--- 256 KB, 1-way ---
+    Config : ./prob4_configs/cache_256KB_1way.cfg
+    Read energy : 0.570652 nJ
+
+--- 16 KB, 2-way ---
+    Config : ./prob4_configs/cache_16KB_2way.cfg
+    Read energy : 0.191514 nJ
+
+--- 32 KB, 2-way ---
+    Config : ./prob4_configs/cache_32KB_2way.cfg
+    Read energy : 0.206864 nJ
+
+--- 64 KB, 2-way ---
+    Config : ./prob4_configs/cache_64KB_2way.cfg
+    Read energy : 0.237731 nJ
+
+--- 128 KB, 2-way ---
+    Config : ./prob4_configs/cache_128KB_2way.cfg
+    Read energy : 0.303592 nJ
+
+--- 256 KB, 2-way ---
+    Config : ./prob4_configs/cache_256KB_2way.cfg
+    Read energy : 0.579359 nJ
+
+--- 16 KB, 4-way ---
+    Config : ./prob4_configs/cache_16KB_4way.cfg
+    Read energy : 0.370194 nJ
+
+--- 32 KB, 4-way ---
+    Config : ./prob4_configs/cache_32KB_4way.cfg
+    Read energy : 0.385906 nJ
+
+--- 64 KB, 4-way ---
+    Config : ./prob4_configs/cache_64KB_4way.cfg
+    Read energy : 0.416210 nJ
+
+--- 128 KB, 4-way ---
+    Config : ./prob4_configs/cache_128KB_4way.cfg
+    Read energy : 0.482228 nJ
+
+--- 256 KB, 4-way ---
+    Config : ./prob4_configs/cache_256KB_4way.cfg
+    Read energy : 0.592880 nJ
+
+--- 16 KB, 8-way ---
+    Config : ./prob4_configs/cache_16KB_8way.cfg
+    Read energy : 0.713570 nJ
+
+--- 32 KB, 8-way ---
+    Config : ./prob4_configs/cache_32KB_8way.cfg
+    Read energy : 0.728950 nJ
+
+--- 64 KB, 8-way ---
+    Config : ./prob4_configs/cache_64KB_8way.cfg
+    Read energy : 0.759647 nJ
+
+--- 128 KB, 8-way ---
+    Config : ./prob4_configs/cache_128KB_8way.cfg
+    Read energy : 0.825942 nJ
+
+--- 256 KB, 8-way ---
+    Config : ./prob4_configs/cache_256KB_8way.cfg
+    Read energy : 1.047090 nJ
+
+=================================================================
+SUMMARY TABLE — Total Dynamic Read Energy per Access (nJ)
+=================================================================
+Assoc        16 KB     32 KB     64 KB    128 KB    256 KB
+----------------------------------------------------------
+1-way      0.10692   0.12289   0.15379   0.29541   0.57065
+2-way      0.19151   0.20686   0.23773   0.30359   0.57936
+4-way      0.37019   0.38591   0.41621   0.48223   0.59288
+8-way      0.71357   0.72895   0.75965   0.82594   1.04709
+=================================================================
+
+Plot saved : ./prob_4_fig29.png
+Done.
