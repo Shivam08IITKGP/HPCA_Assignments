@@ -1,0 +1,294 @@
+# Pinning experiments to CPU core 2
+
+# Results for N = 1024, B = 32
+
+matmul_naive_1024.c:26:27: optimized: loop vectorized using 32 byte vectors
+matmul_blocking_1024.c:30:40: optimized: loop vectorized using 32 byte vectors
+# Naive results (-O0)
+Naive matrix multiplication time: 3.455388 seconds
+Ignore: C[0][0] = 255.670366
+
+ Performance counter stats for './naive_1024_O0':
+
+     <not counted>      cpu_atom/cache-references/                                              (0.00%)
+     1,080,060,010      cpu_core/cache-references/                                            
+     <not counted>      cpu_atom/cache-misses/                                                  (0.00%)
+        12,005,155      cpu_core/cache-misses/           #    1.11% of all cache refs         
+
+       3.488872044 seconds time elapsed
+
+       3.483467000 seconds user
+       0.004999000 seconds sys
+
+
+# Naive results (-O3)
+Naive matrix multiplication time: 0.646073 seconds
+Ignore: C[0][0] = 255.670366
+
+ Performance counter stats for './naive_1024_O3':
+
+     <not counted>      cpu_atom/cache-references/                                              (0.00%)
+       271,444,878      cpu_core/cache-references/                                            
+     <not counted>      cpu_atom/cache-misses/                                                  (0.00%)
+        11,042,284      cpu_core/cache-misses/           #    4.07% of all cache refs         
+
+       0.679362401 seconds time elapsed
+
+       0.674181000 seconds user
+       0.005001000 seconds sys
+
+
+# Blocking results (-O0)
+Blocked matrix multiplication time: 2.199694 seconds
+Ignore: C[0][0] = 255.670366
+
+ Performance counter stats for './blocking_1024_O0':
+
+     <not counted>      cpu_atom/cache-references/                                              (0.00%)
+        32,675,955      cpu_core/cache-references/                                            
+     <not counted>      cpu_atom/cache-misses/                                                  (0.00%)
+         3,266,873      cpu_core/cache-misses/           #   10.00% of all cache refs         
+
+       2.231486841 seconds time elapsed
+
+       2.228052000 seconds user
+       0.004997000 seconds sys
+
+
+# Blocking results (-O3)
+Blocked matrix multiplication time: 0.159419 seconds
+Ignore: C[0][0] = 255.670366
+
+ Performance counter stats for './blocking_1024_O3':
+
+     <not counted>      cpu_atom/cache-references/                                              (0.00%)
+        31,929,310      cpu_core/cache-references/                                            
+     <not counted>      cpu_atom/cache-misses/                                                  (0.00%)
+         2,812,974      cpu_core/cache-misses/           #    8.81% of all cache refs         
+
+       0.192761936 seconds time elapsed
+
+       0.184635000 seconds user
+       0.007984000 seconds sys
+
+
+
+# Results for N = 2048, B = 32
+
+matmul_naive_2048.c:26:27: optimized: loop vectorized using 32 byte vectors
+matmul_blocking_2048.c:30:40: optimized: loop vectorized using 32 byte vectors
+# Naive results (-O0)
+Naive matrix multiplication time: 60.282580 seconds
+Ignore: C[0][0] = 519.572357
+
+ Performance counter stats for './naive_2048_O0':
+
+     <not counted>      cpu_atom/cache-references/                                              (0.00%)
+     8,674,614,411      cpu_core/cache-references/                                            
+     <not counted>      cpu_atom/cache-misses/                                                  (0.00%)
+     2,052,557,864      cpu_core/cache-misses/           #   23.66% of all cache refs         
+
+      60.415306550 seconds time elapsed
+
+      60.377052000 seconds user
+       0.030995000 seconds sys
+
+
+# Naive results (-O3)
+Naive matrix multiplication time: 18.482190 seconds
+Ignore: C[0][0] = 519.572357
+
+ Performance counter stats for './naive_2048_O3':
+
+     <not counted>      cpu_atom/cache-references/                                              (0.00%)
+     2,188,509,865      cpu_core/cache-references/                                            
+     <not counted>      cpu_atom/cache-misses/                                                  (0.00%)
+     1,477,413,926      cpu_core/cache-misses/           #   67.51% of all cache refs         
+
+      18.614515668 seconds time elapsed
+
+      18.586065000 seconds user
+       0.025995000 seconds sys
+
+
+# Blocking results (-O0)
+Blocked matrix multiplication time: 19.823201 seconds
+Ignore: C[0][0] = 519.572357
+
+ Performance counter stats for './blocking_2048_O0':
+
+     <not counted>      cpu_atom/cache-references/                                              (0.00%)
+       262,109,848      cpu_core/cache-references/                                            
+     <not counted>      cpu_atom/cache-misses/                                                  (0.00%)
+        58,876,451      cpu_core/cache-misses/           #   22.46% of all cache refs         
+
+      19.955577846 seconds time elapsed
+
+      19.925934000 seconds user
+       0.026995000 seconds sys
+
+
+# Blocking results (-O3)
+Blocked matrix multiplication time: 1.346314 seconds
+Ignore: C[0][0] = 519.572357
+
+ Performance counter stats for './blocking_2048_O3':
+
+     <not counted>      cpu_atom/cache-references/                                              (0.00%)
+       253,749,805      cpu_core/cache-references/                                            
+     <not counted>      cpu_atom/cache-misses/                                                  (0.00%)
+        57,672,947      cpu_core/cache-misses/           #   22.73% of all cache refs         
+
+       1.478575773 seconds time elapsed
+
+       1.449300000 seconds user
+       0.029006000 seconds sys
+
+
+
+# Results for N = 4096, B = 32
+
+matmul_naive_4096.c:26:27: optimized: loop vectorized using 32 byte vectors
+matmul_blocking_4096.c:30:40: optimized: loop vectorized using 32 byte vectors
+# Naive results (-O0)
+Naive matrix multiplication time: 853.468909 seconds
+Ignore: C[0][0] = 1042.708464
+
+ Performance counter stats for './naive_4096_O0':
+
+     <not counted>      cpu_atom/cache-references/                                              (0.00%)
+    70,263,888,182      cpu_core/cache-references/                                            
+     <not counted>      cpu_atom/cache-misses/                                                  (0.00%)
+    50,774,634,952      cpu_core/cache-misses/           #   72.26% of all cache refs         
+
+     853.991686805 seconds time elapsed
+
+     853.789077000 seconds user
+       0.110988000 seconds sys
+
+
+# Naive results (-O3)
+Naive matrix multiplication time: 195.068293 seconds
+Ignore: C[0][0] = 1042.708464
+
+ Performance counter stats for './naive_4096_O3':
+
+     <not counted>      cpu_atom/cache-references/                                              (0.00%)
+    17,703,108,664      cpu_core/cache-references/                                            
+     <not counted>      cpu_atom/cache-misses/                                                  (0.00%)
+    15,803,427,903      cpu_core/cache-misses/           #   89.27% of all cache refs         
+
+     195.591360136 seconds time elapsed
+
+     195.455323000 seconds user
+       0.114986000 seconds sys
+
+
+# Blocking results (-O0)
+Blocked matrix multiplication time: 168.323469 seconds
+Ignore: C[0][0] = 1042.708464
+
+ Performance counter stats for './blocking_4096_O0':
+
+     <not counted>      cpu_atom/cache-references/                                              (0.00%)
+     2,207,860,749      cpu_core/cache-references/                                            
+     <not counted>      cpu_atom/cache-misses/                                                  (0.00%)
+       806,826,406      cpu_core/cache-misses/           #   36.54% of all cache refs         
+
+     168.888000002 seconds time elapsed
+
+     168.755530000 seconds user
+       0.109986000 seconds sys
+
+
+# Blocking results (-O3)
+Blocked matrix multiplication time: 13.346495 seconds
+Ignore: C[0][0] = 1042.708464
+
+ Performance counter stats for './blocking_4096_O3':
+
+     <not counted>      cpu_atom/cache-references/                                              (0.00%)
+     2,124,841,019      cpu_core/cache-references/                                            
+     <not counted>      cpu_atom/cache-misses/                                                  (0.00%)
+       730,777,244      cpu_core/cache-misses/           #   34.39% of all cache refs         
+
+      13.913689662 seconds time elapsed
+
+      13.794537000 seconds user
+       0.116979000 seconds sys
+
+
+
+# Results for N = 8192, B = 32
+
+matmul_naive_8192.c:26:27: optimized: loop vectorized using 32 byte vectors
+matmul_blocking_8192.c:30:40: optimized: loop vectorized using 32 byte vectors
+# Naive results (-O0)
+Naive matrix multiplication time: 7574.905479 seconds
+Ignore: C[0][0] = 2073.767056
+
+ Performance counter stats for './naive_8192_O0':
+
+     <not counted>      cpu_atom/cache-references/                                              (0.00%)
+   728,972,555,292      cpu_core/cache-references/                                            
+     <not counted>      cpu_atom/cache-misses/                                                  (0.00%)
+   528,850,496,165      cpu_core/cache-misses/           #   72.55% of all cache refs         
+
+    7577.132680636 seconds time elapsed
+
+    7575.929383000 seconds user
+       0.454955000 seconds sys
+
+
+# Naive results (-O3)
+Naive matrix multiplication time: 1628.391124 seconds
+Ignore: C[0][0] = 2073.767056
+
+ Performance counter stats for './naive_8192_O3':
+
+     <not counted>      cpu_atom/cache-references/                                              (0.00%)
+   204,750,670,392      cpu_core/cache-references/                                            
+     <not counted>      cpu_atom/cache-misses/                                                  (0.00%)
+   136,840,513,767      cpu_core/cache-misses/           #   66.83% of all cache refs         
+
+    1630.494362400 seconds time elapsed
+
+    1629.885768000 seconds user
+       0.410950000 seconds sys
+
+
+# Blocking results (-O0)
+Blocked matrix multiplication time: 1344.729923 seconds
+Ignore: C[0][0] = 2073.767056
+
+ Performance counter stats for './blocking_8192_O0':
+
+     <not counted>      cpu_atom/cache-references/                                              (0.00%)
+    20,104,446,844      cpu_core/cache-references/                                            
+     <not counted>      cpu_atom/cache-misses/                                                  (0.00%)
+     8,765,197,350      cpu_core/cache-misses/           #   43.60% of all cache refs         
+
+    1346.940583295 seconds time elapsed
+
+    1346.298985000 seconds user
+       0.476941000 seconds sys
+
+
+# Blocking results (-O3)
+Blocked matrix multiplication time: 113.562452 seconds
+Ignore: C[0][0] = 2073.767056
+
+ Performance counter stats for './blocking_8192_O3':
+
+     <not counted>      cpu_atom/cache-references/                                              (0.00%)
+    19,100,680,276      cpu_core/cache-references/                                            
+     <not counted>      cpu_atom/cache-misses/                                                  (0.00%)
+     8,265,750,547      cpu_core/cache-misses/           #   43.27% of all cache refs         
+
+     115.785677171 seconds time elapsed
+
+     115.316890000 seconds user
+       0.452936000 seconds sys
+
+
+

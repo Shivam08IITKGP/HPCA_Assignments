@@ -1,0 +1,126 @@
+\documentclass[10pt,a4paper]{article}
+\usepackage[margin=1.4cm, top=1.2cm, bottom=1.2cm]{geometry}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{colortbl}
+\usepackage{caption}
+\usepackage[skip=3pt]{parskip}
+\usepackage{titlesec}
+\usepackage{microtype}
+\usepackage{amsmath}
+
+\definecolor{headerblue}{RGB}{30,90,160}
+\definecolor{rowgray}{RGB}{240,240,240}
+
+\titleformat{\section}{\normalfont\large\bfseries\color{headerblue}}{}{0em}{}
+\titlespacing{\section}{0pt}{4pt}{2pt}
+
+\captionsetup{font=small, labelfont=bf, skip=4pt}
+
+\begin{document}
+
+\begin{center}
+    {\Large \textbf{Assignment 2 --- Problem 2: Cache Blocking in Matrix Multiplication}}\\[3pt]
+    {\normalsize CS60003: High Performance Computer Architecture \quad|\quad IIT Kharagpur \quad|\quad Spring 2025--26}
+\end{center}
+
+\vspace{2pt}
+\hrule
+\vspace{4pt}
+
+\section{Experimental Setup}
+
+Two $N \times N$ matrix multiplication programs were implemented: (a) \textbf{Naive} --- the
+classic $O(N^3)$ triple-nested loop, and (b) \textbf{Blocked} --- the cache-blocking algorithm
+with block size $B=32$, which partitions matrices into $B \times B$ tiles to improve cache reuse.
+Both implementations utilized an optimized `i->k->j` loop order to ensure contiguous memory access.
+All matrices (\texttt{X}, \texttt{Y}, \texttt{Z}) are global 2-D arrays of \texttt{double}-precision
+floats; \texttt{Y} and \texttt{Z} are filled with random values and $X = Y \cdot Z$ is computed.
+Each program was compiled with \texttt{-O0} and \texttt{-O3 -march=native -fopt-info-vec}.
+All experiments were pinned to \textbf{CPU core 2} (P-core) via \texttt{taskset} to eliminate
+scheduling noise, and executed as consistent cold runs. Cache statistics were collected using 
+\texttt{perf stat}; only \texttt{cpu\_core} counters are reported. Correctness was verified by 
+checking that \texttt{X[0][0]} matches across both implementations for each $N$.
+
+\vspace{4pt}
+\section{Results}
+
+\begin{table}[h!]
+\centering
+\small
+\setlength{\tabcolsep}{6pt}
+\renewcommand{\arraystretch}{1.15}
+
+\caption{Run time, cache references, cache misses, and miss rate for all 16 configurations ($B=32$, pinned to P-core 2).}
+
+\begin{tabular}{c l l r r r}
+
+\toprule
+\rowcolor{headerblue}
+\color{white}\textbf{N} &
+\color{white}\textbf{Algorithm} &
+\color{white}\textbf{Opt. Flag} &
+\color{white}\textbf{Time (s)} &
+\color{white}\textbf{Cache References} &
+\color{white}\textbf{Cache Misses (Miss \%)} \\
+
+\midrule
+
+1024 & Naive   & \texttt{-O0} & 3.488  & 1,080,060,010 & 12,005,155 (1.11\%) \\
+     & Naive   & \texttt{-O3} & 0.679  &   271,444,878 & 11,042,284 (4.07\%) \\
+\rowcolor{rowgray}
+     & Blocked & \texttt{-O0} & 2.231  &    32,675,955 &  3,266,873 (10.00\%) \\
+\rowcolor{rowgray}
+     & Blocked & \texttt{-O3} & 0.192  &    31,929,310 &  2,812,974 (8.81\%) \\
+
+\midrule
+
+2048 & Naive   & \texttt{-O0} & 60.415  & 8,674,614,411 & 2,052,557,864 (23.66\%) \\
+     & Naive   & \texttt{-O3} & 18.614  & 2,188,509,865 & 1,477,413,926 (67.51\%) \\
+\rowcolor{rowgray}
+     & Blocked & \texttt{-O0} & 19.955  &   262,109,848 &    58,876,451 (22.46\%) \\
+\rowcolor{rowgray}
+     & Blocked & \texttt{-O3} & 1.478   &   253,749,805 &    57,672,947 (22.73\%) \\
+
+\midrule
+
+4096 & Naive   & \texttt{-O0} & 853.991  & 70,263,888,182 & 50,774,634,952 (72.26\%) \\
+     & Naive   & \texttt{-O3} & 195.591  & 17,703,108,664 & 15,803,427,903 (89.27\%) \\
+\rowcolor{rowgray}
+     & Blocked & \texttt{-O0} & 168.888  &  2,207,860,749 &    806,826,406 (36.54\%) \\
+\rowcolor{rowgray}
+     & Blocked & \texttt{-O3} & 13.913   &  2,124,841,019 &    730,777,244 (34.39\%) \\
+
+\midrule
+
+8192 & Naive   & \texttt{-O0} & 7577.132  & 728,972,555,292 & 528,850,496,165 (72.55\%) \\
+     & Naive   & \texttt{-O3} & 1630.494  & 204,750,670,392 & 136,840,513,767 (66.83\%) \\
+\rowcolor{rowgray}
+     & Blocked & \texttt{-O0} & 1346.940  &  20,104,446,844 &   8,765,197,350 (43.60\%) \\
+\rowcolor{rowgray}
+     & Blocked & \texttt{-O3} & 115.785   &  19,100,680,276 &   8,265,750,547 (43.27\%) \\
+
+\bottomrule
+\end{tabular}
+
+\end{table}
+
+\vspace{1pt}
+
+\section{Observations}
+
+\textbf{1. Blocked \texttt{-O3} dominates Naive \texttt{-O3} at large scales.}
+At $N=8192$, both algorithms successfully utilize AVX2 vectorization, but the Blocked implementation (115.7\,s) is a massive $\sim$14$\times$ faster than the Naive implementation (1630.4\,s). While compiler optimizations improve raw throughput, they cannot fix poor memory access patterns. By constraining the working set to $B \times B$ tiles that fit within the L1/L2 cache, the Blocked algorithm actively prevents capacity misses as the matrix sizes exceed available L3 space.
+
+\textbf{2. Blocking reduces absolute cache references and misses by orders of magnitude.}
+At $N=8192$ (\texttt{-O3}), the Naive approach generates over 204 billion cache references and 136 billion misses. In contrast, the Blocked approach requires only 19 billion references and incurs just 8.2 billion misses. Even though the Blocked \texttt{-O3} miss rate (43.27\%) appears high on paper, it is a percentage of a vastly smaller pool of total memory accesses. The absolute reduction of roughly 128 billion cache misses is the primary driver of the $14\times$ speedup.
+
+\textbf{3. Vectorization and blocking create a compound performance multiplier.}
+The \texttt{-O3} optimization flag successfully applies SIMD vectorization to the innermost loops of the blocked algorithm (\texttt{loop vectorized using 32 byte vectors}). This creates a powerful synergy: cache blocking minimizes memory access latency, while vectorization maximizes CPU execution throughput. For example, at $N=4096$, the Blocked execution time drops from 168.8\,s (\texttt{-O0}) to just 13.9\,s (\texttt{-O3}), showcasing the combined hardware utilization.
+
+\textbf{4. Consistent $O(N^3)$ algorithmic scaling.}
+The execution times for the Blocked \texttt{-O3} algorithm adhere nearly perfectly to the theoretical $\mathcal{O}(N^3)$ computational complexity of matrix multiplication. As $N$ doubles, the execution time increases by a factor of roughly $8\times$ ($2^3$): 0.19\,s $\rightarrow$ 1.47\,s ($\sim 7.7\times$), 1.47\,s $\rightarrow$ 13.9\,s ($\sim 9.4\times$), and 13.9\,s $\rightarrow$ 115.7\,s ($\sim 8.3\times$). This consistent scaling validates the cache blocking implementation and proves that memory bottlenecks have been successfully mitigated.
+
+\end{document}

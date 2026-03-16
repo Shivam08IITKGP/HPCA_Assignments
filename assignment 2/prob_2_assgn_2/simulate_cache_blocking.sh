@@ -11,10 +11,11 @@ CORE=2
 echo "# Pinning experiments to CPU core $CORE" >> $LOG
 echo "" >> $LOG
 
-# Array of matrix sizes
+# Array of matrix sizes for the assignment
 SIZES=(1024 2048 4096 8192)
 
 for N in "${SIZES[@]}"; do
+    echo "Running N = $N..."
     echo "# Results for N = $N, B = 32" >> $LOG
     echo "" >> $LOG
 
@@ -26,7 +27,7 @@ for N in "${SIZES[@]}"; do
     gcc -O0 -o blocking_${N}_O0 matmul_blocking_${N}.c >> $LOG 2>&1
     gcc -O3 -march=native -fopt-info-vec -o blocking_${N}_O3 matmul_blocking_${N}.c >> $LOG 2>&1
 
-    # Execute and generate results (pinned to core $CORE via taskset)
+    # Execute and generate results (Consistent Cold Runs)
     echo "# Naive results (-O0)" >> $LOG
     taskset -c $CORE perf stat -e cache-references,cache-misses ./naive_${N}_O0 >> $LOG 2>&1
 
